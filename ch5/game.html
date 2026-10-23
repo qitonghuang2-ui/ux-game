@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>情绪过山车侦探</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: phone-first single column. Header (case + stars), story, track, current card, feedback, next button. */
+:root{
+  --bg:#FFFAF0; --card:#FFFFFF; --line:#E3DCCB; --ink:#404040; --muted:#7F7F7F;
+  --teal:#165E5D; --teal2:#5F9387; --pale:#E7EFEC; --orange:#B4572B; --peach:#FBEBDD;
+  --red:#C8483B; --face:#F6C94C; --faceBad:#F2A89B; --ok:#2E7D5B; --okbg:#E3F1E9;
+  --font:"Microsoft YaHei","PingFang SC","Noto Sans SC","Hiragino Sans GB",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --face:#E3B93E; --faceBad:#D98C80; --ok:#7FD1A8; --okbg:#27403A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --face:#E3B93E; --faceBad:#D98C80; --ok:#7FD1A8; --okbg:#27403A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;line-height:1.6;
+  padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:clamp(24px,6.4vw,34px);margin:0 0 4px;text-wrap:balance}
+h2{font-size:19px;margin:0 0 6px;color:var(--teal)}
+.sub{color:var(--muted);margin:0 0 12px;font-size:15px}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-size:15px;font-weight:700;color:var(--teal)}
+.stars{font-size:18px;letter-spacing:2px;color:var(--orange)}
+.combo{font-size:13px;background:var(--peach);color:var(--orange);border-radius:999px;padding:1px 10px;margin-left:6px;font-weight:700}
+.story{background:var(--pale);border-radius:14px;padding:10px 14px;font-size:16px;margin-bottom:10px}
+.story b{color:var(--teal)}
+.btn{font-size:17px;font-weight:700;padding:11px 22px;border-radius:14px;border:none;background:var(--orange);color:#fff}
+.btn.alt{background:var(--pale);color:var(--teal)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.rules{margin:10px 0 0;padding:10px 14px 10px 32px;background:var(--pale);border-radius:14px;font-size:15px}
+.rules li{margin:2px 0}
+/* track */
+.trackbox{border:1px solid var(--line);border-radius:16px;background:var(--card);padding:6px 8px 4px;margin-bottom:10px}
+.trackbox svg{display:block;width:100%;height:auto}
+.st{font-size:30px;fill:var(--muted);text-anchor:middle}
+.st.on{fill:var(--teal);font-weight:700}
+.st.low{fill:var(--red);font-weight:700}
+.face-mouth{fill:none;stroke:#3a3a3a;stroke-width:3;stroke-linecap:round}
+/* cards */
+.qc{border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--card)}
+.qc .nm{font-weight:700;color:var(--teal);font-size:17px;margin-bottom:6px}
+.cmp{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:10px}
+.cmp div{border-radius:12px;padding:8px 12px;font-size:16px}
+.cmp .e{background:var(--pale)} .cmp .a{background:var(--peach)}
+.cmp small{display:block;font-size:13px;font-weight:700;color:var(--muted)}
+.opts{display:grid;gap:8px}
+.opt{width:100%;text-align:left;font-size:16px;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px 14px}
+.opt:hover{border-color:var(--teal2)}
+.opt.row3{text-align:center;font-weight:700}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.three .opt{text-align:center;padding:10px 4px;font-weight:700;font-size:15px}
+.opt .em{display:block;font-size:26px;line-height:1.2}
+.opt.right{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--peach);border-color:var(--red);color:var(--red)}
+.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.pop{animation:pop .4s}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
+.fb{margin-top:10px;border-radius:14px;padding:10px 14px;font-size:16px;min-height:2.6em}
+.fb.ok{background:var(--okbg);color:var(--ok);font-weight:700}
+.fb.no{background:var(--peach);color:var(--red);font-weight:700}
+.fb.info{background:var(--pale);color:var(--teal)}
+.big{font-size:44px;text-align:center;margin:4px 0}
+.res li{margin:4px 0}
+.medal{font-size:26px;font-weight:700;text-align:center;color:var(--orange);margin:2px 0 6px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>情绪过山车侦探</h1>
+  <p class="sub">每个案件里，有一个人的心情一路过山车。你来判断：哪一站把TA惹毛了？</p>
+  <section class="panel" id="app"></section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LV={good:{t:'比预期好',e:'满意',lv:0,em:'😀'},same:{t:'差不多',e:'一般',lv:1,em:'😐'},bad:{t:'比预期差',e:'负面',lv:2,em:'😞'}};
+const YS=[55,125,190];
+
+const CASES=[
+ {id:'canteen',name:'食堂午高峰',who:'🧑‍🎓',story:'小林 12:10 下课，想赶紧吃上午饭。',stages:[
+  {n:'走去食堂',e:'路上顺顺利利走到',a:'一路通畅，五分钟就到了',k:'same'},
+  {n:'看菜单',e:'要看一会儿才能选定',a:'门口大屏菜单清楚，一眼看明白，马上选好',k:'good'},
+  {n:'排队打饭',e:'排几分钟就轮到',a:'队伍拐了两个弯，二十分钟才轮到',k:'bad'},
+  {n:'找座位',e:'不指望有什么好位子',a:'找到靠窗的座位，旁边还有插座',k:'good'}],
+  pain:'队太长，也不知道还要排多久',
+  fix:[{t:'手机上显示“现在排队约几分钟”，再多开一个窗口',ok:1},{t:'把门口的菜单屏换成更大的屏',why:'菜单这一站本来就很顺，先别动它。'},{t:'把整个食堂重新装修一遍',why:'全都改，太费力，也改不深。'}]},
+ {id:'repair',name:'宿舍报修',who:'🧑‍🔧',story:'小周宿舍的水龙头漏水，想尽快修好。',stages:[
+  {n:'发现漏水',e:'应该找后勤报修',a:'确实是后勤管，没走错',k:'same'},
+  {n:'找报修入口',e:'打开微信就能找到',a:'要在三个公众号里翻，最后问了舍友才找到',k:'bad'},
+  {n:'提交申请',e:'要填一大堆信息',a:'拍张照、点一下就提交了',k:'good'},
+  {n:'等师傅上门',e:'可能要等好几天',a:'第二天下午就修好了',k:'good'}],
+  pain:'报修入口太难找',
+  fix:[{t:'把报修入口放到微信首页或常用小程序里，一眼能找到',ok:1},{t:'把“拍照提交”做得更花哨',why:'提交这一站本来就很顺，不用再加码。'},{t:'让师傅明天更早上门',why:'上门已经比预期快了，先别动它。'}]},
+ {id:'card',name:'补办校园卡',who:'🧑‍💻',story:'小陈周六发现校园卡丢了，想尽快补上。',stages:[
+  {n:'发现丢了',e:'怕没法马上挂失',a:'手机上30秒就挂失成功了',k:'good'},
+  {n:'去补办',e:'随时去窗口都能办',a:'到了才知道窗口只在工作日下午开，白跑一趟',k:'bad'},
+  {n:'等新卡',e:'要等一两天',a:'说周一就能领',k:'same'},
+  {n:'领新卡',e:'要排队领卡',a:'凭短信两分钟就领完了',k:'good'}],
+  pain:'不知道窗口什么时候开，白跑一趟',
+  fix:[{t:'挂失成功的页面上，直接写明补办窗口的时间和地点',ok:1},{t:'把挂失再做得快一点',why:'挂失已经只要30秒，是满意的一站，先别动它。'},{t:'把整个补办流程推倒重来',why:'全都改，太费力，也改不深。'}]},
+ {id:'course',name:'抢选修课',who:'🧑‍🎤',story:'小郑要抢一门热门选修课。',stages:[
+  {n:'登录选课系统',e:'能顺利进去',a:'页面白屏，刷新了三次才进去',k:'bad'},
+  {n:'搜索课程',e:'能搜到想选的课',a:'一搜就搜到了',k:'same'},
+  {n:'点击选课',e:'点完可能要等很久才知道成没成',a:'马上弹出“选课成功”',k:'good'},
+  {n:'查看课表',e:'课表应该会更新',a:'课表更新了，上课时间也没冲突',k:'same'}],
+  pain:'登录卡住，不知道要等多久',
+  fix:[{t:'登录卡住时提示“正在排队，预计等待几分钟”，别让页面白着',ok:1},{t:'把课表页面做得更好看',why:'课表这一站已经正常，先别动它。'},{t:'把整个选课系统推倒重做',why:'全都改，太费力，也改不深。'}]},
+ {id:'print',name:'网上打印论文',who:'🧑‍🏫',story:'小吴要把论文打印出来，赶下午交。',stages:[
+  {n:'找到打印入口',e:'扫店门口的码就行',a:'扫码后要先关注公众号，再注册账号',k:'bad'},
+  {n:'上传文件',e:'传上去就行',a:'传完马上显示页数和预览',k:'good'},
+  {n:'设置并付款',e:'要自己调好几项',a:'默认就是双面黑白，直接付款',k:'good'},
+  {n:'取文件',e:'到店里拿',a:'到店时文件已经打好，放在架子上',k:'same'}],
+  pain:'还没打印，先要关注、注册，太绕',
+  fix:[{t:'扫码后直接进上传页，注册放到最后，或者免注册',ok:1},{t:'多加几种打印颜色可选',why:'入口这一站才是最难受的，颜色不是现在的问题。'},{t:'换一台更贵的打印机',why:'打印机不是让TA难受的地方。'}]}
+];
+const SPOT=[
+ {q:'小林约人吃饭，下面两份“旅程阶段”，哪一份画对了？（第3步：只写主要路线）',opts:[
+   {t:'想约 → 发消息 → 等回复 → 一起吃饭',ok:1},
+   {t:'想约 → 发消息 → 群里没人回 → 改发私信 → 私信也没回 → 再发一次群 → 终于有人回 → 一起吃饭',why:'这样把各种分支一条条都列进去，图会越画越乱。只写最主要的一条路。'}],
+  yes:'对！只写主要的一条路，图才看得清。'},
+ {q:'小林这张图里有三个不太好的地方：①等回复时消息被刷走（情绪：负面）；②想约时不好意思开口（情绪：一般）；③食堂有点吵（情绪：一般）。机会点怎么选？（第8步）',opts:[
+   {t:'三个都改，一个不漏',why:'什么都想改，结果每个都改不深。'},
+   {t:'只挑情绪最低的那个：①消息被刷走',ok:1},
+   {t:'挑最容易改的：③食堂吵',why:'容易改，不等于最该改。要看情绪最低的地方。'}],
+  yes:'对！只挑情绪最低的那一个，改得深。'}
+];
+
+let G;
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+let used=[];
+function newGame(){
+  let pool=CASES.filter(c=>!used.includes(c.id));
+  if(pool.length<3){used=[];pool=CASES.slice()}
+  const deck=shuffle(pool).slice(0,3);used=used.concat(deck.map(c=>c.id));
+  G={deck,ci:0,phase:'intro',si:0,got:[],miss:0,stars:[],spot:0,spotStars:[],streak:0,best:0,fb:'',fbc:'info',lock:false,done:false,lowFound:false,fixOpts:null};
+  render();
+}
+const totalStars=()=>G.stars.reduce((a,b)=>a+b,0)+G.spotStars.reduce((a,b)=>a+b,0);
+const cur=()=>G.deck[G.ci];
+
+function path(pts){
+  if(pts.length<2)return '';
+  let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2,k=0.2;
+    d+=` C${p1[0]+(p2[0]-p0[0])*k},${p1[1]+(p2[1]-p0[1])*k} ${p2[0]-(p3[0]-p1[0])*k},${p2[1]-(p3[1]-p1[1])*k} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+function face(cx,cy,lv,hot,r){
+  r=r||24;const fill=lv===2?'var(--faceBad)':'var(--face)';
+  const m=lv===0?`M${cx-9},${cy+6} Q${cx},${cy+16} ${cx+9},${cy+6}`:lv===1?`M${cx-8},${cy+9} L${cx+8},${cy+9}`:`M${cx-9},${cy+12} Q${cx},${cy+3} ${cx+9},${cy+12}`;
+  return `<g class="${hot?'pop':''}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${hot?'var(--red)':'#3a3a3a'}" stroke-width="${hot?5:2.5}"/><circle cx="${cx-8}" cy="${cy-5}" r="2.8" fill="#3a3a3a"/><circle cx="${cx+8}" cy="${cy-5}" r="2.8" fill="#3a3a3a"/><path class="face-mouth" d="${m}" style="stroke-width:2.6"/></g>`;
+}
+function track(c,upto,lowIdx){
+  const n=c.stages.length,xs=c.stages.map((_,i)=>1000*(i+.5)/n);
+  const pts=[];for(let i=0;i<upto;i++)pts.push([xs[i],YS[LV[c.stages[i].k].lv]]);
+  let g=`<line x1="0" y1="125" x2="1000" y2="125" stroke="var(--line)" stroke-width="2" stroke-dasharray="8 8"/>`;
+  g+=`<text x="6" y="48" class="st" style="text-anchor:start;font-size:24px">满意</text><text x="6" y="115" class="st" style="text-anchor:start;font-size:24px">一般</text><text x="6" y="222" class="st" style="text-anchor:start;font-size:24px">负面</text>`;
+  if(pts.length>1)g+=`<path d="${path(pts)}" fill="none" stroke="var(--orange)" stroke-width="6" stroke-linecap="round"/>`;
+  c.stages.forEach((s,i)=>{
+    if(i<upto)g+=face(xs[i],YS[LV[s.k].lv],LV[s.k].lv,lowIdx===i);
+    else g+=`<circle cx="${xs[i]}" cy="125" r="${i===upto?22:16}" fill="var(--card)" stroke="${i===upto?'var(--orange)':'var(--line)'}" stroke-width="${i===upto?4:2.5}" stroke-dasharray="${i===upto?'':'5 4'}"/><text x="${xs[i]}" y="132" class="st on" style="font-size:30px">?</text>`;
+    g+=`<text x="${xs[i]}" y="252" class="st ${lowIdx===i?'low':i===upto?'on':''}">${esc(s.n)}</text>`;
+  });
+  return `<div class="trackbox"><svg viewBox="0 0 1000 266" role="img" aria-label="情绪曲线，随着你的判断一站一站画出来">${g}</svg></div>`;
+}
+function header(){
+  const c=G.phase==='spot'||G.phase==='final'?null:cur();
+  const left=G.phase==='spot'?'挑错关':G.phase==='final'?'结果':`案件 ${G.ci+1}/3　${esc(c.name)}`;
+  return `<div class="top"><span>${left}${G.streak>=2&&G.phase!=='final'?`<span class="combo">连对 ×${G.streak}</span>`:''}</span><span class="stars" aria-label="已得星星">${'★'.repeat(totalStars())||'☆'}</span></div>`;
+}
+const fbBox=()=>`<div class="fb ${G.fbc}" role="status" aria-live="polite">${G.fb||''}</div>`;
+
+function render(){
+  const a=$('#app');let h='';
+  if(G.phase==='intro'){
+    h=`<div class="big">🎢</div><h2>你是旅程图侦探</h2>
+    <p style="margin:0 0 4px">一共3个小案件，每个案件分3步，不用交，也没人看你的成绩。</p>
+    <ol class="rules"><li><b>判情绪：</b>比一比TA“预期什么”和“实际发生了什么”，选好、差不多、差。</li>
+    <li><b>找最低点：</b>曲线画好后，点情绪最低的那一站。</li>
+    <li><b>选改法：</b>三个办法里，选改得最划算的那个。</li></ol>
+    <p class="sub" style="margin-top:10px">一次就答对，才拿满星。选错了不扣分，会告诉你为什么。</p>
+    <div class="row"><button class="btn" id="go">开始第一个案件</button></div>`;
+  }else if(G.phase==='judge'){
+    const c=cur(),s=c.stages[G.si];
+    h=header()+`<div class="story">${c.who} <b>${esc(c.story)}</b></div>`+track(c,G.si,-1)+
+    `<div class="qc" id="qc"><div class="nm">第${G.si+1}站：${esc(s.n)}</div>
+    <div class="cmp"><div class="e"><small>TA 预期</small>${esc(s.e)}</div><div class="a"><small>实际发生</small>${esc(s.a)}</div></div>
+    <div style="font-weight:700;margin:0 0 6px">实际和预期比，怎么样？</div>
+    <div class="three">${['good','same','bad'].map(k=>`<button class="opt" data-k="${k}"><span class="em">${LV[k].em}</span>${LV[k].t}</button>`).join('')}</div></div>`+fbBox();
+  }else if(G.phase==='low'){
+    const c=cur(),li=c.stages.findIndex(s=>s.k==='bad');
+    h=header()+`<div class="story">${c.who} <b>${esc(c.story)}</b></div>`+track(c,4,G.lowFound?li:-1)+
+    `<div class="qc"><div class="nm">曲线画好了：哪一站最该先改？</div>
+    <div class="opts">${c.stages.map((s,i)=>`<button class="opt ${G.lowFound&&i===li?'right':''}" data-low="${i}" ${G.lowFound?'disabled':''}>${i+1}　${esc(s.n)}</button>`).join('')}</div></div>`+fbBox()+
+    (G.lowFound?`<div class="row"><button class="btn" id="next">下一步：选改法</button></div>`:'');
+  }else if(G.phase==='fix'){
+    const c=cur(),li=c.stages.findIndex(s=>s.k==='bad');
+    h=header()+`<div class="story">${c.who} <b>最低的一站：${esc(c.stages[li].n)}</b>。痛点：${esc(c.pain)}。</div>`+track(c,4,li)+
+    `<div class="qc"><div class="nm">三个办法，选哪个改得最划算？</div><div class="opts">${G.fixOpts.map((o,i)=>`<button class="opt ${G.done&&o.ok?'right':''}" data-fix="${i}" ${G.done?'disabled':''}>${esc(o.t)}</button>`).join('')}</div></div>`+fbBox()+
+    (G.done?`<div class="row"><button class="btn" id="next">${G.ci<2?'下一个案件':'去挑错关'}</button></div>`:'');
+  }else if(G.phase==='spot'){
+    const q=SPOT[G.spot];
+    h=header()+`<div class="qc"><div class="nm">第${G.spot+1}题 / 共${SPOT.length}题</div><p style="margin:0 0 10px">${esc(q.q)}</p><div class="opts">${G.spotOpts.map((o,i)=>`<button class="opt ${G.done&&o.ok?'right':''}" data-spot="${i}" ${G.done?'disabled':''}>${esc(o.t)}</button>`).join('')}</div></div>`+fbBox()+
+    (G.done?`<div class="row"><button class="btn" id="next">${G.spot<SPOT.length-1?'下一题':'看结果'}</button></div>`:'');
+  }else if(G.phase==='final'){
+    const t=totalStars(),max=3*3+SPOT.length;
+    const title=t>=max-1?'金牌旅程图侦探':t>=max-4?'正式旅程图侦探':'见习旅程图侦探';
+    h=header()+`<div class="big">🏅</div><div class="medal">${title}</div><p style="text-align:center;margin:0 0 8px">${t} / ${max} 颗星</p>
+    <ul class="res" style="list-style:none;padding:0;margin:0">${G.deck.map((c,i)=>`<li>${c.who} ${esc(c.name)}　<span class="stars">${'★'.repeat(G.stars[i])}${'☆'.repeat(3-G.stars[i])}</span></li>`).join('')}</ul>
+    <div class="story" style="margin-top:12px">你刚才练的，就是旅程图的第7步和第8步：<b>判断情绪、找出最低的一站、只改那一站</b>。接下来，用同样的办法画你自己的旅程图。</div>
+    <div class="row"><button class="btn" id="again">换3个新案件再玩一次</button></div>`;
+  }
+  a.innerHTML=h;
+  const g=(id,f)=>{const e=$(id);if(e)e.onclick=f};
+  g('#go',()=>{G.phase='judge';G.fb='';render()});
+  g('#again',newGame);
+  g('#next',next);
+  a.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>judge(b));
+  a.querySelectorAll('[data-low]').forEach(b=>b.onclick=()=>lowPick(b));
+  a.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>fixPick(b));
+  a.querySelectorAll('[data-spot]').forEach(b=>b.onclick=()=>spotPick(b));
+}
+function wrongHit(b){G.miss++;G.streak=0;b.classList.add('wrong');b.disabled=true;const q=b.closest('.qc');q.classList.remove('shake');void q.offsetWidth;q.classList.add('shake')}
+function okHit(){G.streak++;G.best=Math.max(G.best,G.streak)}
+const QUIP={good:'曲线往上走 ↗',same:'曲线走平 →',bad:'曲线往下掉 ↘'};
+function judge(b){
+  const c=cur(),s=c.stages[G.si],k=b.dataset.k;
+  if(k===s.k){
+    okHit();G.fbc='ok';G.fb=`对！${LV[k].t}，TA的情绪是“${LV[k].e}”。${QUIP[k]}`;G.si++;
+    if(G.si>=4){G.phase='low';G.lowFound=false;G.fb='曲线画好了！'+(G.miss===0?'':'')+'接下来：找最低的一站。';G.fbc='info'}
+    render();
+  }else{
+    wrongHit(b);G.fbc='no';
+    G.fb=`再比一比：预期是“${esc(s.e)}”，实际是“${esc(s.a)}”。实际是超过了、差不多、还是不如预期？`;
+    $('#app .fb').className='fb no';$('#app .fb').innerHTML=G.fb;
+  }
+}
+function lowPick(b){
+  const c=cur(),i=+b.dataset.low,li=c.stages.findIndex(s=>s.k==='bad');
+  if(i===li){okHit();G.lowFound=true;G.fbc='ok';G.fb=`对！最低的是“${esc(c.stages[li].n)}”。这一站就是机会点。`;render()}
+  else{wrongHit(b);G.fbc='no';$('#app .fb').className='fb no';$('#app .fb').innerHTML='这一站的情绪没有这么低。看曲线，找掉得最深的那个。'}
+}
+function fixPick(b){
+  const o=G.fixOpts[+b.dataset.fix];
+  if(o.ok){okHit();G.done=true;G.fbc='ok';G.fb='对！改在情绪最低的这一站，最划算。';
+    const st=G.miss===0?3:G.miss<=2?2:1;G.stars[G.ci]=st;render()}
+  else{wrongHit(b);$('#app .fb').className='fb no';$('#app .fb').innerHTML=esc(o.why)}
+}
+function spotPick(b){
+  const q=SPOT[G.spot],o=G.spotOpts[+b.dataset.spot];
+  if(o.ok){G.done=true;G.fbc='ok';G.fb=q.yes;G.spotStars[G.spot]=G.spotMiss?0:1;render()}
+  else{G.spotMiss=1;b.classList.add('wrong');b.disabled=true;$('#app .fb').className='fb no';$('#app .fb').innerHTML=esc(o.why)}
+}
+function next(){
+  G.fb='';G.fbc='info';
+  if(G.phase==='low'){G.phase='fix';G.done=false;G.fixOpts=shuffle(cur().fix)}
+  else if(G.phase==='fix'){
+    if(G.ci<2){G.ci++;G.phase='judge';G.si=0;G.miss=0;G.done=false;G.lowFound=false}
+    else{G.phase='spot';G.spot=0;G.done=false;G.spotMiss=0;G.spotOpts=shuffle(SPOT[0].opts)}
+  }else if(G.phase==='spot'){
+    if(G.spot<SPOT.length-1){G.spot++;G.done=false;G.spotMiss=0;G.spotOpts=shuffle(SPOT[G.spot].opts)}
+    else G.phase='final';
+  }
+  render();window.scrollTo({top:0,behavior:'smooth'});
+}
+newGame();
+</script>

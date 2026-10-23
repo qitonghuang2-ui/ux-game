@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>画像人物的一天</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: phone-first single column. Scene preview on top, four moment cards, summary card. */
+:root{
+  --bg:#FFFAF0; --card:#FFFFFF; --line:#E3DCCB; --ink:#404040; --muted:#7F7F7F;
+  --teal:#165E5D; --teal2:#5F9387; --pale:#E7EFEC; --orange:#B4572B; --peach:#FBEBDD;
+  --ground:#8DBFB3; --road:#6B7D78;
+  --font:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --ground:#3E6B62; --road:#9AABA6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --ground:#3E6B62; --road:#9AABA6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;line-height:1.6;
+  padding-block:18px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:clamp(24px,6vw,32px);margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 14px;font-size:15px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{flex:1;font:inherit;font-size:17px;font-weight:700;padding:10px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--teal);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--teal);color:var(--bg);border-color:var(--teal)}
+button:focus-visible,input:focus-visible,.tab:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.badge{display:inline-block;background:var(--pale);color:var(--teal);font-weight:700;font-size:13px;padding:3px 12px;border-radius:999px}
+label.f{display:block;font-size:14px;font-weight:700;color:var(--teal2);margin:10px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:9px 12px}
+/* scene */
+.scene{position:relative;border-radius:14px;overflow:hidden;height:355px;transition:background 1s;border:1px solid var(--line);margin-top:12px}
+.scene>svg:first-child{position:absolute;inset:0;width:100%;height:100%}
+.bld{position:absolute;transform:translateX(-50%);width:14%;min-width:48px;max-width:110px;background:var(--pale);border:2px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;transition:border-color .4s,background .4s;overflow:hidden}
+.bld::after{content:"";position:absolute;inset:30px 7px 6px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='20'%3E%3Crect x='3' y='3' width='9' height='10' rx='1.5' fill='%235F9387' fill-opacity='.5'/%3E%3C/svg%3E");background-size:18px 20px}
+.bld .sign{position:absolute;left:3px;right:3px;top:5px;z-index:1;text-align:center;font-size:12px;font-weight:700;color:var(--teal);background:var(--card);border-radius:6px;padding:1px 0;line-height:1.35;white-space:nowrap}
+.bld.on{border-color:var(--orange);background:var(--peach)}
+.bld.on .sign{background:var(--orange);color:#fff}
+.orb{position:absolute;width:40px;height:40px;border-radius:50%;transition:left .9s ease,top .9s ease,background .9s,box-shadow .9s;transform:translate(-50%,-50%)}
+.walk .bob{animation:bob .45s ease-in-out infinite;transform-box:fill-box}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+.walk .legA{transform-origin:60px 148px;animation:swA .45s ease-in-out infinite alternate}
+.walk .legB{transform-origin:60px 148px;animation:swB .45s ease-in-out infinite alternate}
+@keyframes swA{from{transform:rotate(-20deg)}to{transform:rotate(20deg)}}
+@keyframes swB{from{transform:rotate(20deg)}to{transform:rotate(-20deg)}}
+.walk .armB{transform-origin:60px 94px;animation:swB2 .45s ease-in-out infinite alternate}
+@keyframes swB2{from{transform:rotate(18deg)}to{transform:rotate(-18deg)}}
+.walk .tail{transform-origin:54px 40px;animation:tl .45s ease-in-out infinite alternate}
+@keyframes tl{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+.me{position:absolute;bottom:22px;width:92px;height:199px;transform:translateX(-50%);transition:left .9s ease;overflow:visible}
+.tag{position:absolute;bottom:4px;transform:translateX(-50%);transition:left .9s ease;font-size:12px;font-weight:700;color:var(--teal);background:var(--card);border-radius:999px;padding:0 10px;border:1px solid var(--line);white-space:nowrap}
+.bubble{position:absolute;top:8px;max-width:86%;background:var(--peach);color:var(--orange);font-weight:700;font-size:14px;padding:6px 12px;border-radius:14px;border:1.5px solid var(--orange);opacity:0;transition:opacity .2s;z-index:3}
+.bubble.on{opacity:1;transition:opacity .4s .5s}
+.clock{position:absolute;right:10px;top:8px;font-weight:700;font-size:15px;color:#fff;background:rgba(22,94,93,.85);border-radius:999px;padding:0 12px}
+.play{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:17px;font-weight:700;padding:10px 22px;border-radius:14px;border:none;cursor:pointer;background:var(--orange);color:#fff}
+.btn.alt{background:var(--pale);color:var(--teal)}
+.btn:disabled{opacity:.6;cursor:default}
+/* moments */
+.mom{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px;background:var(--card)}
+.mom.cur{border-color:var(--teal2);box-shadow:0 0 0 3px var(--pale)}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mh b{color:var(--teal);font-size:17px}
+.rnd{font:inherit;font-size:13px;background:var(--pale);color:var(--teal);border:none;border-radius:999px;padding:3px 12px;cursor:pointer;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:15px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--teal);color:var(--bg);border-color:var(--teal);font-weight:700}
+.chip.fe[aria-pressed="true"]{background:var(--orange);border-color:var(--orange);color:#fff}
+/* summary */
+.sum{margin-top:16px;background:var(--pale);border-radius:16px;padding:14px 16px}
+.sum h2{margin:0 0 8px;font-size:18px;color:var(--teal)}
+.sum ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sum li{background:var(--card);border-radius:12px;padding:8px 12px;font-size:15px}
+.sum li b{color:var(--teal)}
+.sum li i{font-style:normal;color:var(--orange);font-weight:700}
+.steps{margin:12px 0 4px;padding:12px 16px 12px 34px;background:var(--pale);border-radius:14px;font-size:15px;color:var(--ink)}
+.steps li{margin:2px 0}
+.hint{color:var(--muted);font-size:14px;margin:10px 2px 0}
+/* box */
+.reels{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.reel{background:var(--pale);border-radius:16px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid transparent}
+.reel.lock{border-color:var(--teal2)}
+.reel .k{font-size:13px;font-weight:700;color:var(--teal2);letter-spacing:.08em;min-width:3.6em}
+.reel .v{flex:1;font-size:21px;font-weight:700;color:var(--teal)}
+.reel.spin .v{color:var(--muted)}
+.reel.pop{animation:pop .45s}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+.keep{font:inherit;font-size:13px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 12px;cursor:pointer}
+.reel.lock .keep{background:var(--teal2);color:#fff;border-color:var(--teal2)}
+.result{margin-top:14px;background:var(--peach);border-radius:16px;padding:14px 16px;font-size:18px;border:1.5px dashed var(--orange)}
+.result b{color:var(--orange)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+.bubble{transform:translateY(8px) scale(.96);transition:opacity .2s,transform .2s}
+.bubble.on{transform:none;transition:opacity .4s .5s,transform .4s .5s}
+.bubble::after{content:"";position:absolute;bottom:-7px;left:var(--tail,50%);width:12px;height:12px;background:var(--peach);border-right:1.5px solid var(--orange);border-bottom:1.5px solid var(--orange);transform:translateX(-50%) rotate(45deg)}
+.gate{position:absolute;transform:translateX(-50%);height:230px;border-left:2px dashed var(--teal2);opacity:.8}
+.bld .sign small{display:block;font-size:11px;color:var(--orange);font-weight:700}
+.bld.out::after{inset-top:50px}
+.bld.out::after{inset:48px 7px 6px}
+</style>
+
+<div class="wrap">
+  <h1>画像人物的一天</h1>
+  <p class="sub">把你上次课做的人物画像，放进TA一天的真实生活里，看看TA的需求是在哪一刻冒出来的。</p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-day" aria-selected="true">我的一天</button>
+    <button class="tab" role="tab" id="t-box" aria-selected="false">场景盲盒</button>
+  </div>
+
+  <section class="panel" id="p-day" role="tabpanel" aria-labelledby="t-day">
+    <ol class="steps"><li>先点“看示例”，看看示例里的大学生是怎么写一天的。</li><li>再点“我自己来”，换成你画像人物的名字。</li><li>给下面的每个时刻选好时间、地点、在做什么和当时的感觉，再写一句TA这时候想要什么（不想写可以跳过）。</li><li>点“播放这一天”看动画，最后点“复制成文字”，粘到你的人物画像里。</li></ol>
+    <label class="f">画像人物是</label>
+    <div class="chips" id="gchips"><button class="chip" data-g="m" aria-pressed="true">男生</button><button class="chip" data-g="f" aria-pressed="false">女生</button></div>
+    <label class="f" for="pname">画像人物的名字（照上次课的画像填）</label>
+    <input type="text" id="pname" value="" placeholder="例如：小林" maxlength="8" autocomplete="off">
+    <div class="scene" id="scene">
+      <svg viewBox="0 0 900 230" preserveAspectRatio="none" aria-hidden="true">
+        <rect x="0" y="190" width="900" height="40" fill="var(--ground)"/>
+        <rect x="0" y="196" width="900" height="14" fill="var(--road)"/>
+      </svg>
+      <div id="bldgs"></div>
+      <div class="orb" id="orb"></div>
+      <svg class="me" id="me" viewBox="0 0 120 260" aria-hidden="true"></svg>
+      <div class="tag" id="tag"></div>
+      <div class="clock" id="clock"></div>
+      <div class="bubble" id="bubble"></div>
+    </div>
+    <div class="play">
+      <button class="btn" id="demo">看示例</button><button class="btn alt" id="mine">我自己来</button><button class="btn alt" id="play">播放这一天</button>
+      <button class="btn alt" id="rndall">全部帮我选</button>
+    </div>
+    <div id="moms"></div>
+    <div class="sum">
+      <h2 id="sumT"></h2>
+      <ol id="sumL"></ol>
+      <div class="play"><button class="btn alt" id="copy">复制成文字</button></div>
+      <p class="hint">点“复制成文字”，粘到你人物画像里“生活中的一天”那一栏就行。也可以粘给 AI，让它帮你补得更完整，或者直接截图留着。</p>
+    </div>
+  </section>
+
+  <section class="panel" id="p-box" role="tabpanel" aria-labelledby="t-box" hidden>
+    <span class="badge">自己玩 · 不用说出来</span>
+    <div class="reels">
+      <div class="reel" id="r0"><span class="k">时间</span><span class="v">？</span><button class="keep" data-i="0">锁定</button></div>
+      <div class="reel" id="r1"><span class="k">地点</span><span class="v">？</span><button class="keep" data-i="1">锁定</button></div>
+      <div class="reel" id="r2"><span class="k">小意外</span><span class="v">？</span><button class="keep" data-i="2">锁定</button></div>
+    </div>
+    <div class="play"><button class="btn" id="draw">抽一个场景</button><button class="btn alt" id="bcopy" disabled>复制给 AI 写故事</button></div>
+    <div class="result" id="result">点“抽一个场景”，看看你的画像人物会碰上什么。想留下其中一项，就点它右边的“锁定”，再抽的时候它不会变。</div>
+    <p class="hint">玩法：点“抽一个场景”，三个转轮会随机停在一个时间、一个地点和一件小意外上。看到结果后，自己在心里想想：换成是TA，会怎么办？TA最想要什么？不用说出来。想让 AI 写成小故事，就点“复制给 AI”，再把你的人物画像一起粘过去。</p>
+  </section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const BLD=['宿舍楼','食堂','教学楼','图书馆','校门口','快递站'],BX=[9,25,42,59,75,91],BH=[190,165,205,195,130,150],SUBL=['','','','','','校外'];
+function renderBld(bottom){const el=document.getElementById('bldgs');el.innerHTML=`<div class="gate" style="left:83%;bottom:${bottom}px"></div>`+BLD.map((n,i)=>`<div class="bld${SUBL[i]?' out':''}" id="bld${i}" style="left:${BX[i]}%;bottom:${bottom}px;height:${BH[i]}px"><div class="sign">${n}${SUBL[i]?'<small>（'+SUBL[i]+'）</small>':''}</div></div>`).join('')}
+function hiBld(b){BLD.forEach((_,i)=>{const e=document.getElementById('bld'+i);if(e)e.classList.toggle('on',i===b)})}
+renderBld(56);
+let G='m';
+const pr=()=>G==='f'?'她':'他';
+const wish=n=>{n=n.trim();return /^想/.test(n)?`${pr()}在想：要是能${n.slice(1)}就好了`:`${pr()}在想：${n}`};
+function avatar(g,shirt,shirt2){
+  const f=g==='f';
+  const skin='#F6D3B3', skinD='#E4B793', hair=f?'#3A2A25':'#2F2E2C';
+  const jeans=f?'#86A8CB':'#3F5A7A', jeansD=f?'#6F92B8':'#324B68';
+  const leg=(cls,c)=>`<g class="${cls}"><rect x="52" y="146" width="17" height="92" rx="8" fill="${c}"/><path d="M50 236 L70 236 L85 245 Q88 253 79 253 L53 253 Q48 253 48 247 Z" fill="#FFFFFF" stroke="#CFC8BA" stroke-width="1.5"/><path d="M49 249 L83 249" stroke="${shirt2}" stroke-width="2.5"/></g>`;
+  const ponytail=f?`<g class="tail"><path d="M54 36 Q36 40 36 66 Q36 92 46 104 Q42 80 52 62 Z" fill="${hair}"/></g>`:'';
+  const hairShape=f
+   ?`<path d="M50 50 Q48 26 66 25 Q82 26 80 44 Q72 34 62 36 Q56 40 56 56 Z" fill="${hair}"/><circle cx="52" cy="38" r="3.2" fill="#E86A7A"/>`
+   :`<path d="M49 52 Q46 25 66 24 Q82 25 80 42 Q74 34 64 34 Q58 38 58 54 Z" fill="${hair}"/>`;
+  return `<ellipse cx="60" cy="254" rx="38" ry="5" fill="#000" opacity=".13"/>
+  <g id="flip">
+   <g class="armB"><path d="M60 94 Q58 118 58 140" stroke="${shirt2}" stroke-width="12" stroke-linecap="round" fill="none"/><circle cx="58" cy="144" r="6" fill="${skinD}"/></g>
+   ${leg('legB',jeansD)}
+   <g class="bob">
+    <rect x="29" y="84" width="24" height="58" rx="11" fill="#8DBFB3"/>
+    <rect x="43" y="78" width="36" height="72" rx="15" fill="${shirt}"/>
+    <rect x="43" y="142" width="36" height="9" rx="4" fill="${shirt2}"/>
+    <path d="M50 80 Q60 96 74 82" stroke="${shirt2}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="46" y="86" width="5" height="40" rx="2.5" fill="#6F9F93"/>
+    <rect x="56" y="64" width="11" height="18" rx="5" fill="${skinD}"/>
+    ${ponytail}
+    <g transform="rotate(16 62 68)">
+     <ellipse cx="64" cy="48" rx="15.5" ry="19" fill="${skin}"/>
+     <path d="M78 50 Q85 54 78 58 Z" fill="${skin}"/>
+     <circle cx="58" cy="52" r="3.8" fill="${skinD}"/>
+     ${hairShape}
+     <path d="M70 40.5 L79 41.5" stroke="${hair}" stroke-width="2" stroke-linecap="round"/>
+     <path d="M71 48.5 Q74.5 51.5 77.5 48.5" stroke="#33403D" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+     <path d="M72 59.5 Q75.5 61.5 78.5 59" stroke="#B4572B" stroke-width="2" stroke-linecap="round" fill="none"/>
+     <ellipse cx="68" cy="58" rx="3.6" ry="2.2" fill="#F4A7A0" opacity=".5"/>
+    </g>
+    ${leg('legA',jeans)}
+    <path d="M84 78 L96 84 L90 118 L82 112 Z" fill="#FFF3B0" opacity=".14"/>
+    <g class="armA">
+     <path d="M62 94 Q60 116 70 124" stroke="${shirt}" stroke-width="12" stroke-linecap="round" fill="none"/>
+     <path d="M70 124 Q82 118 86 100" stroke="${shirt}" stroke-width="11" stroke-linecap="round" fill="none"/>
+     <g transform="rotate(26 88 92)"><rect x="84" y="78" width="7" height="28" rx="3.2" fill="#2B3633"/><rect x="84.5" y="80" width="2.2" height="24" rx="1" fill="#8DBFB3"/></g>
+     <ellipse cx="87" cy="100" rx="5.4" ry="6" fill="${skin}"/>
+    </g>
+   </g>
+  </g>`;
+}
+let FL=false,LASTX=null;
+function applyFlip(){const e=document.getElementById('flip');if(e)e.setAttribute('transform',FL?'translate(120 0) scale(-1 1)':'')}
+function walkTo(x){const m=document.getElementById('me');if(LASTX!==null&&x!==LASTX){FL=x<LASTX;applyFlip();m.classList.add('walk');clearTimeout(walkTo.t);walkTo.t=setTimeout(()=>m.classList.remove('walk'),950)}LASTX=x}
+
+const SLOTS=[
+ {name:'早上，先吃早饭',times:['6:50','7:20','7:50'],places:['食堂','宿舍','校门口'],events:['排队买早饭','边吃早饭边刷手机','赖床，差点迟到','赶着去上早八']},
+ {name:'早上，再去上课',times:['7:50','8:05','8:20'],places:['教学楼走廊','教室','去教学楼的路上','实验室'],events:['赶着去上早八','找新教室','上课前刷手机','骑共享单车赶课']},
+ {name:'中午',times:['11:50','12:20','13:30'],places:['快递站','食堂','教学楼走廊','校门口'],events:['排队取快递','排队买饭','点外卖等配送','午休刷视频','边吃边赶作业']},
+ {name:'下午',times:['14:30','15:00','16:30'],places:['图书馆','教室','实验室','社团活动室'],events:['找自习座位','上课走神看手机','小组作业讨论','社团活动','去健身']},
+ {name:'傍晚',times:['17:30','18:30','19:30'],places:['校门口','食堂','快递站','教学楼走廊'],events:['等外卖','排队买饭','去取快递','下课挤着回宿舍']},
+ {name:'晚上',times:['20:30','21:30','22:30','23:30'],places:['宿舍','宿舍楼下','自习室','图书馆'],events:['躺着刷手机','追剧','整理明天要做的事','和朋友语音聊天','赶作业截止']}
+];
+const PLACEB={'宿舍':0,'宿舍楼下':0,'食堂早餐窗口':1,'食堂':1,'教学楼走廊':2,'教室':2,'实验室':2,'社团活动室':2,'图书馆':3,'自习室':3,'快递站':5,'校门口':4,'去教学楼的路上':null};
+const placeX=p=>{const b=PLACEB[p];return b==null?33:BX[b]};
+const FEEL=['开心','放松','着急','焦虑','无聊','烦躁'];
+const state=SLOTS.map(s=>({t:s.times[1],p:s.places[0],e:s.events[0],f:'放松',n:'',custom:''}));
+const moms=$('#moms');
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function chips(list,key,i,cls){return list.map(v=>`<button class="chip ${cls||''}" data-i="${i}" data-k="${key}" data-v="${esc(v)}" aria-pressed="${state[i][key]===v}">${esc(v)}</button>`).join('')}
+function renderMoms(){
+  moms.innerHTML=SLOTS.map((s,i)=>`
+  <div class="mom" id="m${i}">
+    <div class="mh"><b>第 ${i+1} 个时刻 · ${s.name}</b><button class="rnd" data-r="${i}">帮我选</button></div>
+    <label class="f">几点</label><div class="chips">${chips(s.times,'t',i)}</div>
+    <label class="f">在哪里</label><div class="chips">${chips(s.places,'p',i)}</div>
+    <label class="f">在做什么（点选，或者自己写在下面）</label><div class="chips">${chips(s.events,'e',i)}</div>
+    <input type="text" data-c="${i}" placeholder="自己写：TA在做什么" value="${esc(state[i].custom)}" maxlength="30" aria-label="自己写第${i+1}个时刻的事件" style="margin-top:6px">
+    <label class="f">当时的感觉</label><div class="chips">${chips(FEEL,'f',i,'fe')}</div>
+    <label class="f">这一刻TA碰到了什么不方便？TA想要什么？（不想写可以空着）</label>
+    <input type="text" data-n="${i}" placeholder="例如：想知道哪个窗口人最少" value="${esc(state[i].n)}" maxlength="30" aria-label="第${i+1}个时刻冒出的需求">
+  </div>`).join('');
+}
+moms.addEventListener('click',e=>{
+  const c=e.target.closest('.chip');
+  if(c){const i=+c.dataset.i,k=c.dataset.k;state[i][k]=c.dataset.v;if(k==='e')state[i].custom='';renderMoms();summary();preview(i);return}
+  const r=e.target.closest('.rnd');
+  if(r){rand(+r.dataset.r);renderMoms();summary();preview(+r.dataset.r)}
+});
+moms.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.c!==undefined){state[+t.dataset.c].custom=t.value;summary()}
+  if(t.dataset.n!==undefined){state[+t.dataset.n].n=t.value;summary()}
+});
+const pickOf=a=>a[Math.floor(Math.random()*a.length)];
+function rand(i){const s=SLOTS[i];Object.assign(state[i],{t:pickOf(s.times),p:pickOf(s.places),e:pickOf(s.events),f:pickOf(FEEL),custom:''})}
+$('#rndall').onclick=()=>{SLOTS.forEach((_,i)=>rand(i));renderMoms();summary();play()};
+const DEMO_M=[
+ {t:'7:20',p:'食堂',e:'排队买早饭',f:'着急',custom:'早饭窗口都在排长队，离第一节课只剩二十分钟',n:'想知道哪个窗口现在人最少'},
+ {t:'8:05',p:'教学楼走廊',e:'找新教室',f:'着急',custom:'赶到教学楼才发现第一节课换了教室，在走廊里转了一圈才找到',n:'想一进楼就知道教室往哪边走'},
+ {t:'12:20',p:'快递站',e:'排队取快递',f:'烦躁',custom:'走出校门去校外的快递站取件，轮到自己才发现取件码埋在一堆短信里，翻了半天',n:'想一键找到我所有的取件码'},
+ {t:'15:00',p:'图书馆',e:'找自习座位',f:'烦躁',custom:'从一楼走到四楼，没找到空位',n:'想知道哪一层还有空位'},
+ {t:'18:30',p:'校门口',e:'等外卖',f:'烦躁',custom:'站在校门口等外卖，骑手打来电话说找不到人，来回解释了好几遍',n:'想让骑手直接看到我站在哪'},
+ {t:'23:30',p:'宿舍',e:'躺着刷手机',f:'焦虑',custom:'突然想起明天有作业要交，还没记',n:'想睡前一键存好明天的待办'}
+];
+const DEMO={m:{name:'小周',m:DEMO_M},f:{name:'小林',m:DEMO_M}};
+function loadState(arr){arr.forEach((d,i)=>Object.assign(state[i],d))}
+$('#demo').onclick=()=>{const D=DEMO[G];$('#pname').value=D.name;loadState(D.m);renderMoms();summary();play()};
+$('#mine').onclick=()=>{$('#pname').value='';SLOTS.forEach((s,i)=>Object.assign(state[i],{t:s.times[1],p:s.places[0],e:s.events[0],f:'放松',n:'',custom:''}));renderMoms();summary();preview(0);clearInterval(timer);$('#play').textContent='播放这一天';$('#pname').focus()};
+const name=()=>($('#pname').value.trim()||pr());
+const ev=i=>state[i].custom.trim()||state[i].e;
+function summary(){
+  $('#sumT').textContent=`${name()}的一天`;
+  $('#sumL').innerHTML=state.map((s,i)=>`<li><b>${s.t}</b>，${esc(name())}在${esc(s.p)}，${esc(ev(i))}。${pr()}觉得很${esc(s.f)}。${s.n.trim()?`<br><i>冒出的需求：${esc(s.n.trim())}</i>`:''}</li>`).join('');
+}
+$('#pname').addEventListener('input',()=>{summary();$('#tag').textContent=name()+' · '+state[0].p});
+
+/* scene */
+const scene=$('#scene'),orb=$('#orb'),me=$('#me'),bubble=$('#bubble'),tag=$('#tag'),clock=$('#clock');
+function hours(t){const [h,m]=t.split(':').map(Number);return h+m/60}
+function placeBubble(x){const W=scene.clientWidth;bubble.style.maxWidth=Math.min(300,W*0.72)+'px';bubble.style.left='0px';const bw=bubble.offsetWidth;let l=x*W/100-bw/2;l=Math.max(8,Math.min(W-bw-8,l));bubble.style.left=l+'px';bubble.style.setProperty('--tail',Math.max(16,Math.min(bw-16,x*W/100-l))+'px')}
+function preview(i){
+  const s=state[i],h=hours(s.t),night=(h>=19||h<6);
+  scene.style.background=night?'linear-gradient(#1F2B4A,#2E3F6B)':(h>=17?'linear-gradient(#F6C9A0,#F9E3C2)':'linear-gradient(#BFE3F2,#FFF1D6)');
+  const t=Math.max(0,Math.min(1,(h-6)/14));
+  orb.style.left=(8+t*84)+'%';orb.style.top=(night?20:(64-Math.sin(t*Math.PI)*46))+'px';
+  orb.style.background=night?'#F5F0D0':'#F6C177';orb.style.boxShadow=night?'0 0 22px #F5F0D0':'0 0 28px #F6C177';
+  const px=placeX(s.p);me.style.left=px+'%';walkTo(px);hiBld(PLACEB[s.p]==null?-1:PLACEB[s.p]);tag.style.left=Math.min(Math.max(px,18),82)+'%';tag.textContent=name()+' · '+s.p+(s.p==='快递站'?'（校外）':'');clock.textContent=s.t;
+  bubble.classList.remove('on');
+  bubble.textContent=s.n.trim()?wish(s.n):`${s.t}，${s.p}：${ev(i)}。`;
+  placeBubble(px);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>bubble.classList.add('on')));
+  document.querySelectorAll('.mom').forEach((m,k)=>m.classList.toggle('cur',k===i));
+}
+let timer=null;
+function play(){
+  clearInterval(timer);let i=0;preview(0);$('#play').textContent='播放中……';
+  timer=setInterval(()=>{i++;if(i>=state.length){clearInterval(timer);$('#play').textContent='再播放一次';return}preview(i)},2300);
+}
+$('#play').onclick=play;
+renderMoms();summary();preview(0);
+
+/* copy */
+function copyText(text,btn,label){
+  const done=()=>{btn.textContent='已复制';setTimeout(()=>{btn.textContent=label},2200)};
+  const fb=()=>{const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(_){}ta.remove();done()};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fb)}else fb();
+}
+$('#copy').onclick=()=>{
+  const lines=state.map((s,i)=>`${s.t}，${name()}在${s.p}，${ev(i)}。${pr()}觉得很${s.f}。${s.n.trim()?'冒出的需求：'+s.n.trim()+'。':''}`);
+  copyText(`${name()}的一天\n`+lines.join('\n'),$('#copy'),'复制成文字');
+};
+
+/* tabs */
+function tab(day){$('#p-day').hidden=!day;$('#p-box').hidden=day;$('#t-day').setAttribute('aria-selected',day);$('#t-box').setAttribute('aria-selected',!day)}
+$('#t-day').onclick=()=>tab(true);$('#t-box').onclick=()=>tab(false);
+
+/* blind box */
+const POOL=[
+ ['早八前的 7 点','中午 12 点刚下课','下午 3 点','傍晚 6 点','晚上 11 点熄灯后','周末的早上'],
+ ['地铁车厢里','食堂','图书馆','宿舍楼下','教学楼电梯里','校门口','快递站','操场边'],
+ ['突然下起暴雨','手机只剩 5% 的电','耳机忘带了','校园网特别卡','前面排着长队','刚错过一班车','手里提着很重的东西','周围特别吵','饭卡里没钱了','作业今晚就截止']
+];
+const cur=['','',''],lock=[false,false,false];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.querySelectorAll('.keep').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(!cur[i])return;lock[i]=!lock[i];$('#r'+i).classList.toggle('lock',lock[i]);b.textContent=lock[i]?'已锁定':'锁定'});
+const pk=i=>{let v;do{v=pickOf(POOL[i])}while(v===cur[i]);return v};
+let busy=false;
+const sentence=()=>`在${cur[0]}，在${cur[1]}，${cur[2]}。`;
+function finish(){$('#result').innerHTML=`<b>${sentence()}</b>换成是${name()}，会怎么办？${pr()}最想要什么？`;$('#bcopy').disabled=false;$('#draw').disabled=false;busy=false}
+$('#draw').onclick=()=>{
+  if(busy)return;busy=true;$('#draw').disabled=true;$('#bcopy').disabled=true;let stopped=0;
+  [0,1,2].forEach(i=>{
+    if(lock[i]&&cur[i]){stopped++;return}
+    const el=$('#r'+i),v=el.querySelector('.v');el.classList.add('spin');
+    const fin=pk(i),dur=reduce?0:700+i*500;
+    const iv=reduce?null:setInterval(()=>{v.textContent=pickOf(POOL[i])},70);
+    setTimeout(()=>{if(iv)clearInterval(iv);cur[i]=fin;v.textContent=fin;el.classList.remove('spin','pop');void el.offsetWidth;el.classList.add('pop');stopped++;if(stopped===3)finish()},dur);
+  });
+  if(stopped===3)finish();
+};
+$('#bcopy').onclick=()=>copyText(`请把我的人物画像放进这个场景：${sentence()}写一段不超过100字的小故事，说明TA遇到什么麻烦、会怎么做，再用一句话说明这个场景暴露出TA的什么新需求。只使用画像里的信息，画像没写的内容标“（推测）”。`,$('#bcopy'),'复制给 AI 写故事');
+</script>
+
+<script>
+(function(){
+  const setG=g=>{G=g;document.querySelectorAll('#gchips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===g));
+    document.getElementById('me').innerHTML=avatar(g,g==='f'?'#E58F7B':'#D4804A',g==='f'?'#CF7766':'#B86A38');applyFlip();
+    summary();preview(0)};
+  document.querySelectorAll('#gchips .chip').forEach(b=>b.onclick=()=>setG(b.dataset.g));
+  setG('m');
+})();
+</script>

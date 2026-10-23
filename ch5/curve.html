@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>画出情绪曲线</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: phone-first single column. Steps, scene, live curve, stage cards, opportunity + copy. */
+:root{
+  --bg:#FFFAF0; --card:#FFFFFF; --line:#E3DCCB; --ink:#404040; --muted:#7F7F7F;
+  --teal:#165E5D; --teal2:#5F9387; --pale:#E7EFEC; --orange:#B4572B; --peach:#FBEBDD;
+  --red:#C8483B; --face:#F6C94C; --faceBad:#F2A89B;
+  --font:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --face:#E3B93E; --faceBad:#D98C80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --face:#E3B93E; --faceBad:#D98C80; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;line-height:1.6;
+  padding-block:18px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:clamp(24px,6vw,32px);margin:0 0 4px;text-wrap:balance;color:var(--ink)}
+.sub{color:var(--muted);margin:0 0 14px;font-size:15px}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.steps{margin:0 0 4px;padding:12px 16px 12px 34px;background:var(--pale);border-radius:14px;font-size:15px}
+.steps li{margin:2px 0}
+label.f{display:block;font-size:14px;font-weight:700;color:var(--teal2);margin:12px 0 4px}
+input[type=text]{width:100%;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:9px 12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn{font-size:17px;font-weight:700;padding:10px 20px;border-radius:14px;border:none;cursor:pointer;background:var(--orange);color:#fff}
+.btn.alt{background:var(--pale);color:var(--teal)}
+.btn:disabled{opacity:.6;cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:15px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--teal);color:var(--bg);border-color:var(--teal);font-weight:700}
+.chip.good[aria-pressed="true"]{background:var(--teal);border-color:var(--teal)}
+.chip.same[aria-pressed="true"]{background:var(--teal2);border-color:var(--teal2);color:#fff}
+.chip.bad[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+/* chart */
+.chart{margin-top:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);padding:10px 10px 8px}
+.heads{display:grid;gap:6px;margin-left:2.8em}
+.head{background:var(--teal2);color:#fff;text-align:center;font-weight:700;font-size:14px;padding:5px 4px;border-radius:8px 18px 18px 8px;line-height:1.25;min-height:2.4em;display:flex;align-items:center;justify-content:center;transition:background .3s}
+.head.low{background:var(--red)}
+.plot{position:relative;margin-left:2.8em;margin-top:6px}
+.plot svg{display:block;width:100%;height:auto}
+.ax{position:absolute;left:-2.8em;transform:translateY(-50%);font-size:13px;color:var(--muted);width:2.6em}
+.lowline{margin:8px 4px 0;font-size:15px;font-weight:700;color:var(--red);min-height:1.6em}
+/* stage cards */
+.mom{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px;background:var(--card)}
+.mom.low{border-color:var(--red);box-shadow:0 0 0 3px var(--peach)}
+.mh{font-weight:700;color:var(--teal);font-size:17px}
+.mom.low .mh{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr;gap:0}
+.sum{margin-top:16px;background:var(--pale);border-radius:16px;padding:14px 16px}
+.sum h2{margin:0 0 8px;font-size:18px;color:var(--teal)}
+.sum ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sum li{background:var(--card);border-radius:12px;padding:8px 12px;font-size:15px}
+.sum li b{color:var(--teal)}
+.sum li i{font-style:normal;font-weight:700}
+.hint{color:var(--muted);font-size:14px;margin:10px 2px 0}
+.opp{margin-top:16px;border:1.5px dashed var(--orange);background:var(--peach);border-radius:16px;padding:12px 14px}
+.opp h2{margin:0 0 4px;font-size:18px;color:var(--orange)}
+.mapw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff;-webkit-overflow-scrolling:touch}
+.mapw svg{display:block;min-width:900px;width:100%;height:auto}
+.savebox{margin-top:12px;text-align:center}
+.savebox img{max-width:100%;border:1px solid var(--line);border-radius:10px;background:#fff}
+table.jt{border-collapse:collapse;min-width:640px;width:100%;font-size:13.5px}
+.jt th,.jt td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left;min-width:92px}
+.jt thead th{background:var(--teal2);color:#fff;text-align:center}
+.jt tbody th{background:var(--pale);color:var(--teal);white-space:nowrap;min-width:72px}
+.jt td.dim{color:var(--muted);text-align:center}
+.jt td.bad{background:var(--peach);color:var(--red);font-weight:700}
+.jt td.opp{background:var(--peach);color:var(--orange);font-weight:700}
+.face-mouth{fill:none;stroke:#3a3a3a;stroke-width:3;stroke-linecap:round}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>画出情绪曲线</h1>
+  <p class="sub">把你的场景拆成几个阶段，看看TA的感受是在哪一段掉下去的。</p>
+
+  <section class="panel">
+    <ol class="steps">
+      <li>先点“看示例”，看一条完整的情绪曲线是怎么画出来的。</li>
+      <li>再点“我自己来”，写下场景和TA想达成的目标，分成几个阶段，最多7个。</li>
+      <li>每个阶段写：TA做了什么、碰到什么（触点）、期待什么、实际怎样，再选一下比预期好还是差。曲线会自己画出来。</li>
+      <li>最低的那一段写下痛点，再写一个解决办法。下面会自动画成一张企业里用的旅程图，保存成图片或复制成表格都行。</li>
+    </ol>
+
+    <label class="f">看哪个示例</label>
+    <div class="chips" id="demos">
+      <button class="chip" data-d="fan" aria-pressed="true">约人吃饭</button>
+      <button class="chip" data-d="exp" aria-pressed="false">去取快递</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="bdemo">看示例</button>
+      <button class="btn alt" id="bmine">我自己来</button>
+      <button class="btn alt" id="bplay">播放曲线</button>
+    </div>
+
+    <label class="f" for="scene">场景（谁，在什么情况下，想做什么）</label>
+    <input type="text" id="scene" maxlength="40" autocomplete="off" placeholder="例如：小林想约人一起吃饭">
+
+    <label class="f" for="goal">TA的目标（TA最终想得到什么）</label>
+    <input type="text" id="goal" maxlength="40" autocomplete="off" placeholder="例如：和同学一起吃上一顿饭">
+
+    <label class="f">分几个阶段</label>
+    <div class="chips" id="nchips">
+      <button class="chip" data-n="3" aria-pressed="false">3段</button>
+      <button class="chip" data-n="4" aria-pressed="false">4段</button>
+      <button class="chip" data-n="5" aria-pressed="false">5段</button>
+      <button class="chip" data-n="6" aria-pressed="false">6段</button>
+      <button class="chip" data-n="7" aria-pressed="true">7段</button>
+    </div>
+
+    <div class="chart" aria-label="情绪曲线">
+      <div class="heads" id="heads"></div>
+      <div class="plot" id="plot">
+        <div class="ax" style="top:20%">满意</div>
+        <div class="ax" style="top:50%">一般</div>
+        <div class="ax" style="top:80%">负面</div>
+        <svg id="svg" viewBox="0 0 1000 300" role="img" aria-label="情绪曲线图"></svg>
+      </div>
+      <div class="lowline" id="lowline"></div>
+    </div>
+
+    <div id="moms"></div>
+
+    <div class="opp">
+      <h2>机会点：先改哪一段？</h2>
+      <div class="chips" id="oppchips"></div>
+      <label class="f" for="opptext">潜在解决方案（一句话，不想写可以空着）</label>
+      <input type="text" id="opptext" maxlength="40" autocomplete="off" placeholder="例如：让约饭的消息不被群聊刷走">
+    </div>
+
+    <div class="sum">
+      <h2 id="sumT">我的旅程图</h2>
+      <p class="hint" id="sumG" style="margin:0 0 8px"></p>
+      <div class="mapw" id="mapw" aria-label="我的旅程图"></div>
+      <p class="hint" style="margin:6px 0 0">手机上可以左右滑动看全图。</p>
+      <div class="row">
+        <button class="btn" id="savepic">保存成图片</button>
+        <button class="btn alt" id="copy">复制成文字</button>
+        <button class="btn alt" id="copyT">复制成表格</button>
+        <button class="btn alt" id="copyA">复制给AI补全</button>
+      </div>
+      <div class="savebox" id="savebox"></div>
+      <p class="hint">保存成图片：生成一张和企业里一样的旅程图，长按图片存到相册，放进你的项目档案。复制成表格：粘进Word或WPS会自动变成表格。复制给AI补全：粘给AI，它会补上没写的格子，再给你3个解决办法。不用提交，不用说出来。</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const CMP={good:{t:'比预期好',e:'满意',lv:0},same:{t:'差不多',e:'一般',lv:1},bad:{t:'比预期差',e:'负面',lv:2}};
+const DEMOS={
+ fan:{scene:'小林（大一新生）想约人一起吃饭',goal:'和同学一起吃上一顿饭',stages:[
+  {name:'想约',do:'在宿舍想吃饭，不想一个人',tp:'微信',exp:'能找到人一起',act:'不好意思直接开口',cmp:'same',pain:''},
+  {name:'发消息',do:'在班级群里问“有人一起吃饭吗”',tp:'班级群输入框',exp:'几分钟内有人回',act:'消息发出去了',cmp:'same',pain:''},
+  {name:'等回复',do:'刷群消息，等有人回',tp:'群消息提醒',exp:'很快有人接话',act:'消息很快被刷走，没人理',cmp:'bad',pain:'消息一发出去就被刷走，也没有提醒'},
+  {name:'有人接话',do:'终于有同学回了“我也想去”',tp:'群消息',exp:'可能没人理',act:'有两位同学回了',cmp:'good',pain:''},
+  {name:'定时间地点',do:'私聊商量几点、在哪',tp:'微信私聊',exp:'要来回问几次',act:'两句话就定了',cmp:'same',pain:''},
+  {name:'一起去食堂',do:'约在宿舍楼下碰面，一起走',tp:'楼下、食堂窗口',exp:'顺利碰上面',act:'很快碰上了，路上还聊了几句',cmp:'good',pain:''},
+  {name:'吃完回去',do:'吃完各自回宿舍',tp:'食堂、宿舍',exp:'就是吃顿饭',act:'聊得很开心，约好下次再一起',cmp:'good',pain:''}],
+  opp:2,oppText:'让约饭的消息不被群聊刷走'},
+ exp:{scene:'小周中午去校外的快递站取快递',goal:'尽快把快递安全取回宿舍',stages:[
+  {name:'收到取件短信',do:'手机弹出“快递已到”',tp:'短信、快递App',exp:'今天能取到',act:'快递到了，很期待',cmp:'good',pain:''},
+  {name:'走去快递站',do:'中午顶着太阳，走出校门，走了十分钟',tp:'校门口、校外的路',exp:'最好近一点',act:'比想的远，天又热',cmp:'same',pain:''},
+  {name:'到达快递站',do:'走进快递站，找队尾',tp:'快递站门口',exp:'能马上找到队尾',act:'门口有点挤，但找到了',cmp:'same',pain:''},
+  {name:'排队取件',do:'在短信里翻取件码，排队',tp:'快递站、取件码短信',exp:'几分钟取完',act:'队排到门外，取件码埋在一堆短信里',cmp:'bad',pain:'取件码难找，也不知道要排多久'},
+  {name:'找到快递',do:'报取件码，工作人员递过来',tp:'取件码、货架',exp:'几分钟拿到',act:'工作人员很快就找到了',cmp:'good',pain:''},
+  {name:'带回宿舍',do:'抱着快递走回宿舍',tp:'校外的路、宿舍',exp:'顺利拿回来',act:'拿到了，只是有点累',cmp:'same',pain:''},
+  {name:'拆开快递',do:'回宿舍拆开看',tp:'宿舍',exp:'东西没问题',act:'完好无损，挺开心',cmp:'good',pain:''}],
+  opp:3,oppText:'一键找到所有取件码，显示排队人数'}
+};
+let S={scene:'',goal:'',n:7,stages:[],opp:null,oppText:''};
+let shown=99;
+function blank(n){return Array.from({length:n},(_,i)=>({name:'',do:'',tp:'',exp:'',act:'',pain:'',cmp:'same'}))}
+function lowIdx(st){const lv=st.map(s=>CMP[s.cmp].lv),mx=Math.max(...lv);if(mx===0)return[];return lv.map((v,i)=>v===mx?i:-1).filter(i=>i>=0)}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const nm=(s,i)=>s.name.trim()||('第'+(i+1)+'段');
+
+function buildMoms(){
+  $('#moms').innerHTML=S.stages.map((s,i)=>`
+  <div class="mom" id="m${i}">
+    <div class="mh" id="mh${i}">第 ${i+1} 段</div>
+    <label class="f" for="nm${i}">这一段叫什么</label>
+    <input type="text" id="nm${i}" data-k="name" data-i="${i}" maxlength="10" autocomplete="off" value="${esc(s.name)}" placeholder="例如：等回复">
+    <label class="f" for="do${i}">TA在做什么（可以空着）</label>
+    <input type="text" id="do${i}" data-k="do" data-i="${i}" maxlength="30" autocomplete="off" value="${esc(s.do)}">
+    <label class="f" for="tp${i}">TA碰到了什么（App、物品、地点、人，可以空着）</label>
+    <input type="text" id="tp${i}" data-k="tp" data-i="${i}" maxlength="30" autocomplete="off" value="${esc(s.tp)}">
+    <label class="f" for="ex${i}">TA期待发生什么（可以空着）</label>
+    <input type="text" id="ex${i}" data-k="exp" data-i="${i}" maxlength="30" autocomplete="off" value="${esc(s.exp)}">
+    <label class="f" for="ac${i}">实际发生了什么（可以空着）</label>
+    <input type="text" id="ac${i}" data-k="act" data-i="${i}" maxlength="30" autocomplete="off" value="${esc(s.act)}">
+    <label class="f">实际和预期比，怎么样</label>
+    <div class="chips">${['good','same','bad'].map(k=>`<button class="chip ${k}" data-i="${i}" data-c="${k}" aria-pressed="${s.cmp===k}">${CMP[k].t}（${CMP[k].e}）</button>`).join('')}</div>
+    <div id="pw${i}" ${s.cmp==='bad'?'':'hidden'}>
+      <label class="f" for="pn${i}">痛点：这一段让TA难受的是什么</label>
+      <input type="text" id="pn${i}" data-k="pain" data-i="${i}" maxlength="30" autocomplete="off" value="${esc(s.pain)}">
+    </div>
+  </div>`).join('');
+}
+$('#moms').addEventListener('click',e=>{
+  const c=e.target.closest('[data-c]');if(!c)return;
+  const i=+c.dataset.i;S.stages[i].cmp=c.dataset.c;
+  c.parentElement.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b===c));
+  const pw=$('#pw'+i);if(pw)pw.hidden=(c.dataset.c!=='bad');
+  autoOpp();update(true);
+});
+$('#moms').addEventListener('input',e=>{
+  const t=e.target;if(t.dataset.k===undefined)return;
+  S.stages[+t.dataset.i][t.dataset.k]=t.value;update(false);
+});
+function autoOpp(){const l=lowIdx(S.stages);if(S.opp===null||!l.includes(S.opp))S.opp=l.length?l[0]:null}
+
+function path(pts){
+  if(pts.length<2)return '';
+  let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2,k=0.2;
+    d+=` C${p1[0]+(p2[0]-p0[0])*k},${p1[1]+(p2[1]-p0[1])*k} ${p2[0]-(p3[0]-p1[0])*k},${p2[1]-(p3[1]-p1[1])*k} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+function faceSvg(cx,cy,lv,low){
+  const r=30,fill=lv===2?'var(--faceBad)':'var(--face)';
+  const mouth=lv===0?`M${cx-11},${cy+7} Q${cx},${cy+19} ${cx+11},${cy+7}`:lv===1?`M${cx-10},${cy+11} L${cx+10},${cy+11}`:`M${cx-11},${cy+15} Q${cx},${cy+4} ${cx+11},${cy+15}`;
+  return `<g><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${low?'var(--red)':'#3a3a3a'}" stroke-width="${low?6:3}"/><circle cx="${cx-10}" cy="${cy-6}" r="3.4" fill="#3a3a3a"/><circle cx="${cx+10}" cy="${cy-6}" r="3.4" fill="#3a3a3a"/><path class="face-mouth" d="${mouth}"/></g>`;
+}
+const YS=[60,150,240];
+function chart(){
+  const n=S.stages.length,low=lowIdx(S.stages);
+  $('#heads').style.gridTemplateColumns=`repeat(${n},1fr)`;
+  $('#heads').innerHTML=S.stages.map((s,i)=>`<div class="head${low.includes(i)?' low':''}" style="${n>=6?'font-size:11px;padding:4px 1px;border-radius:6px':n===5?'font-size:12px':''}">${esc(nm(s,i))}</div>`).join('');
+  const pts=S.stages.map((s,i)=>[1000*(i+.5)/n,YS[CMP[s.cmp].lv]]);
+  const vis=pts.slice(0,Math.min(shown,n));
+  let g=`<line x1="0" y1="150" x2="1000" y2="150" stroke="var(--line)" stroke-width="2" stroke-dasharray="8 8"/>`;
+  if(vis.length>1)g+=`<path d="${path(vis)}" fill="none" stroke="var(--orange)" stroke-width="7" stroke-linecap="round"/>`;
+  vis.forEach((p,i)=>{g+=faceSvg(p[0],p[1],CMP[S.stages[i].cmp].lv,low.includes(i))});
+  $('#svg').innerHTML=g;
+  const ll=$('#lowline');
+  if(!low.length)ll.textContent='现在每一段都不低于预期。把实际比预期差的那一段，选成“比预期差”，曲线就会掉下去。';
+  else if(low.length===1)ll.textContent=`情绪最低：${nm(S.stages[low[0]],low[0])}${S.stages[low[0]].act.trim()?'，'+S.stages[low[0]].act.trim():''}`;
+  else ll.textContent=`有${low.length}段一样低（${low.map(i=>nm(S.stages[i],i)).join('、')}），选一个最痛的当机会点。`;
+  document.querySelectorAll('.mom').forEach((m,i)=>{m.classList.toggle('low',low.includes(i));const h=$('#mh'+i);if(h)h.textContent=`第 ${i+1} 段${S.stages[i].name.trim()?' · '+S.stages[i].name.trim():''}${low.includes(i)?'　最低':''}`});
+}
+function oppChips(){
+  $('#oppchips').innerHTML=S.stages.map((s,i)=>`<button class="chip" data-o="${i}" aria-pressed="${S.opp===i}">${esc(nm(s,i))}</button>`).join('');
+}
+$('#oppchips').addEventListener('click',e=>{const b=e.target.closest('[data-o]');if(!b)return;S.opp=+b.dataset.o;oppChips();summary()});
+$('#opptext').addEventListener('input',e=>{S.oppText=e.target.value;summary()});
+function lines(){
+  return S.stages.map((s,i)=>{
+    const parts=[];
+    if(s.do.trim())parts.push('做了：'+s.do.trim());
+    if(s.tp.trim())parts.push('触点：'+s.tp.trim());
+    if(s.exp.trim())parts.push('预期：'+s.exp.trim());
+    if(s.act.trim())parts.push('实际：'+s.act.trim());
+    parts.push('情绪：'+CMP[s.cmp].e);
+    if(s.cmp==='bad'&&s.pain.trim())parts.push('痛点：'+s.pain.trim());
+    return {head:`阶段${i+1} ${nm(s,i)}`,body:parts.join('；'),lv:CMP[s.cmp].lv};
+  });
+}
+function oppLine(){
+  if(S.opp===null)return '';
+  return `机会点：${nm(S.stages[S.opp],S.opp)}${S.oppText.trim()?'，'+S.oppText.trim():''}`;
+}
+const FF='Microsoft YaHei,PingFang SC,Noto Sans SC,sans-serif';
+const CO='#F25C5C',PK='#FBEFEE',PK2='#F9E3E1',LN='#F3D5D5';
+function wrapT(t,m){const o=[],a=Array.from(String(t));let l='';const P='，。、！？；：”’）》…,.!?)';for(let i=0;i<a.length;i++){l+=a[i];if(l.length>=m&&!(a[i+1]&&P.includes(a[i+1]))){o.push(l);l=''}}if(l)o.push(l);return o}
+let FS0=16;
+function tx(x,y,w,h,t,o){
+  o=o||{};const fs=o.fs||FS0,m=Math.max(4,Math.floor((w-24)/fs)),ls=wrapT(t,m).slice(0,Math.floor((h-12)/(fs*1.4)));
+  if(!ls.length)return '';
+  const lh=fs*1.4,y0=y+h/2-(ls.length-1)*lh/2+fs*0.35,ax=o.c?x+w/2:x+14;
+  return `<text x="${ax}" font-family="${FF}" font-size="${fs}" fill="${o.col||'#444'}" font-weight="${o.b?700:400}" text-anchor="${o.c?'middle':'start'}">`+ls.map((l,i)=>`<tspan x="${ax}" y="${y0+i*lh}">${esc(l)}</tspan>`).join('')+'</text>';
+}
+function faceF(cx,cy,lv,hot){
+  const r=17,fill=lv===2?'#F2A89B':'#F6C94C';
+  const m=lv===0?`M${cx-7},${cy+4} Q${cx},${cy+11} ${cx+7},${cy+4}`:lv===1?`M${cx-6},${cy+7} L${cx+6},${cy+7}`:`M${cx-7},${cy+9} Q${cx},${cy+2} ${cx+7},${cy+9}`;
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${hot?'#C8483B':'#444'}" stroke-width="${hot?4:2}"/><circle cx="${cx-6}" cy="${cy-4}" r="2.2" fill="#444"/><circle cx="${cx+6}" cy="${cy-4}" r="2.2" fill="#444"/><path d="${m}" fill="none" stroke="#444" stroke-width="2" stroke-linecap="round"/>`;
+}
+function mapSvg(){
+  const st=S.stages,n=st.length,W=1200,LW=150,CW=(W-LW)/n;FS0=n>=6?14:n===5?15:16;const CHF=n>=6?15:n===5?17:19;
+  const RH=[54,110,90,100,90,170,100,110],HD=100,H=HD+RH.reduce((a,b)=>a+b,0);
+  const Y=[];let a=HD;RH.forEach(h=>{Y.push(a);a+=h});
+  let g=`<rect width="${W}" height="${H}" fill="#fff"/>`;
+  // header
+  g+=`<text x="24" y="70" font-family="${FF}" font-size="34" font-weight="700" fill="${CO}">用户旅程图</text><text x="204" y="56" font-family="${FF}" font-size="13" font-style="italic" fill="#F3A0A0">user</text><text x="204" y="72" font-family="${FF}" font-size="13" font-style="italic" fill="#F3A0A0">journey map</text>`;
+  g+=`<rect x="330" y="12" width="360" height="76" rx="8" fill="#fff" stroke="${CO}" stroke-dasharray="3 3"/><text x="342" y="30" font-family="${FF}" font-size="13" font-style="italic" fill="${CO}">基本信息</text>`+tx(330,28,360,60,S.scene.trim(),{fs:15});
+  g+=`<rect x="710" y="12" width="460" height="76" rx="8" fill="#fff" stroke="${CO}" stroke-dasharray="3 3"/><text x="722" y="30" font-family="${FF}" font-size="13" font-style="italic" fill="${CO}">目标与期望</text>`+tx(710,28,460,60,S.goal.trim(),{fs:15});
+  // row backgrounds
+  const BG=['','#fff',PK,'#fff',PK,PK,'#fff',PK];
+  RH.forEach((h,i)=>{if(i===0)return;g+=`<rect x="${LW}" y="${Y[i]}" width="${W-LW}" height="${h}" fill="${BG[i]}"/>`});
+  for(let c=1;c<n;c++)g+=`<line x1="${LW+c*CW}" y1="${Y[1]}" x2="${LW+c*CW}" y2="${H}" stroke="${LN}"/>`;
+  // left labels
+  g+=`<rect x="0" y="${HD}" width="${LW}" height="${H-HD}" fill="${CO}"/>`;
+  const labs=[['旅程阶段','Stages'],['用户行为','User Actions'],['服务触点','Touchpoint'],['用户预期','User Expectations'],['实际体验','Actual Experience'],['情绪曲线','Emotion'],['用户痛点','Pain Point'],['机会点 / 潜在解决方案','Opportunity']];
+  labs.forEach((l,i)=>{const cy=Y[i]+RH[i]/2;
+    if(i===7){g+=`<text x="16" y="${cy-10}" font-family="${FF}" font-size="21" font-weight="700" fill="#fff">机会点</text><text x="16" y="${cy+10}" font-family="${FF}" font-size="14" font-weight="700" fill="#fff">潜在解决方案</text><text x="16" y="${cy+28}" font-family="${FF}" font-size="12" font-style="italic" fill="#FFD9D9">${l[1]}</text>`}
+    else g+=`<text x="16" y="${cy-2}" font-family="${FF}" font-size="21" font-weight="700" fill="#fff">${l[0]}</text><text x="16" y="${cy+17}" font-family="${FF}" font-size="12" font-style="italic" fill="#FFD9D9">${l[1]}</text>`});
+  // stage chevrons
+  st.forEach((s,i)=>{const x=LW+i*CW,y=Y[0],h=RH[0];
+    g+=`<path d="M${x},${y} L${x+CW-16},${y} L${x+CW},${y+h/2} L${x+CW-16},${y+h} L${x},${y+h} Z" fill="${PK2}" stroke="#fff" stroke-width="2"/>`+tx(x,y,CW-16,h,nm(s,i),{fs:CHF,b:1,col:CO,c:1})});
+  // rows
+  st.forEach((s,i)=>{const x=LW+i*CW;
+    g+=tx(x,Y[1],CW,RH[1],s.do);g+=tx(x,Y[2],CW,RH[2],s.tp);
+    g+=tx(x,Y[3],CW,RH[3],s.exp);g+=tx(x,Y[4],CW,RH[4],s.act);
+    if(s.cmp==='bad'&&s.pain.trim())g+=tx(x,Y[6],CW,RH[6],s.pain,{col:'#C8483B',b:1});
+    if(i===S.opp)g+=`<rect x="${x+8}" y="${Y[7]+8}" width="${CW-16}" height="${RH[7]-16}" rx="10" fill="#FFF6D9" stroke="#E8A317" stroke-width="2"/>`+tx(x+8,Y[7]+8,CW-16,RH[7]-16,S.oppText.trim()||'（写一句解决办法）',{col:'#B4572B',b:1});
+  });
+  // emotion
+  const ey=Y[5],EH=RH[5],top=ey+18,step=(EH-36)/4;
+  ['+2','+1','0','−1','−2'].forEach((t,k)=>{const yy=top+k*step;
+    g+=`<line x1="${LW}" y1="${yy}" x2="${W}" y2="${yy}" stroke="${k===2?CO:'#F5BDBD'}" stroke-width="${k===2?1.5:1}" ${k===2?'':'stroke-dasharray="4 4"'}/><text x="${LW+6}" y="${yy-3}" font-family="${FF}" font-size="11" fill="${CO}">${t}</text>`});
+  const lv=s=>CMP[s.cmp].lv,yOf=s=>top+(lv(s)===0?0:lv(s)===1?2:4)*step;
+  const pts=st.map((s,i)=>[LW+(i+.5)*CW,yOf(s)]);
+  if(pts.length>1)g+=`<path d="${path(pts)}" fill="none" stroke="${CO}" stroke-width="4" stroke-linecap="round"/>`;
+  const low=lowIdx(st);
+  st.forEach((s,i)=>{g+=faceF(pts[i][0],pts[i][1],lv(s),low.includes(i))});
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="用户旅程图">${g}</svg>`;
+}
+function summary(){
+  $('#sumT').textContent=(S.scene.trim()||'我的场景')+'：旅程图';
+  $('#sumG').textContent='';
+  $('#mapw').innerHTML=mapSvg();
+}
+function update(rebuildOpp){
+  chart();if(rebuildOpp!==false)oppChips();summary();
+}
+function withExtra(k){return DEMOS[k]}
+function load(d,keepMine){
+  S.scene=d.scene;S.goal=d.goal||'';S.n=d.stages.length;S.stages=d.stages.map(s=>({tp:'',pain:'',...s}));S.opp=d.opp;S.oppText=d.oppText||'';
+  $('#scene').value=S.scene;$('#goal').value=S.goal;$('#opptext').value=S.oppText;
+  document.querySelectorAll('#nchips .chip').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===S.n));
+  buildMoms();shown=99;update();
+}
+let cur='fan',timer=null;
+document.querySelectorAll('#demos .chip').forEach(b=>b.onclick=()=>{cur=b.dataset.d;document.querySelectorAll('#demos .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+$('#bdemo').onclick=()=>{load(withExtra(cur));play()};
+$('#bmine').onclick=()=>{clearInterval(timer);load({scene:'',goal:'',stages:blank(7),opp:null,oppText:''});$('#scene').focus()};
+$('#scene').addEventListener('input',e=>{S.scene=e.target.value;summary()});
+$('#goal').addEventListener('input',e=>{S.goal=e.target.value;summary()});
+document.querySelectorAll('#nchips .chip').forEach(b=>b.onclick=()=>{
+  const n=+b.dataset.n;if(n===S.n)return;
+  if(n>S.n)S.stages=S.stages.concat(blank(n-S.n));else S.stages=S.stages.slice(0,n);
+  S.n=n;document.querySelectorAll('#nchips .chip').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  autoOpp();if(S.opp!==null&&S.opp>=n)S.opp=null;buildMoms();update();
+});
+function play(){
+  clearInterval(timer);shown=0;chart();let k=0;$('#bplay').textContent='播放中……';
+  timer=setInterval(()=>{k++;shown=k;chart();if(k>=S.stages.length){clearInterval(timer);shown=99;$('#bplay').textContent='播放曲线'}},900);
+}
+$('#bplay').onclick=play;
+function copyText(text,btn,label){
+  const done=()=>{btn.textContent='已复制';setTimeout(()=>{btn.textContent=label},2200)};
+  const fb=()=>{const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(_){}ta.remove();done()};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fb)}else fb();
+}
+$('#copy').onclick=()=>{
+  const L=lines().map(l=>`${l.head}：${l.body}。`);
+  const lowN=lowIdx(S.stages).map(i=>nm(S.stages[i],i)).join('、');
+  copyText(`${S.scene.trim()||'我的场景'}：旅程图\n`+(S.goal.trim()?`目标：${S.goal.trim()}\n`:'')+L.join('\n')+(lowN?`\n情绪最低的一段：${lowN}。`:'')+(oppLine()?'\n'+oppLine()+'。':''),$('#copy'),'复制成文字');
+};
+function savePic(){
+  const svg=mapSvg(),box=$('#savebox');box.textContent='正在生成……';
+  const img=new Image();
+  img.onload=()=>{try{
+    const c=document.createElement('canvas');c.width=img.width*2;c.height=img.height*2;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    const u=c.toDataURL('image/png');box.innerHTML=`<p class="hint" style="margin:0 0 6px"><b>长按下面的图片，选“保存到相册”。</b>电脑上，右键另存为。</p><img alt="我的旅程图" src="${u}">`;
+  }catch(e){box.textContent='生成图片失败，请直接截图上面的旅程图。'}};
+  img.onerror=()=>{box.textContent='生成图片失败，请直接截图上面的旅程图。'};
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+$('#savepic').onclick=savePic;
+function tsv(){
+  const st=S.stages,row=(h,f)=>[h].concat(st.map(f)).join('\t');
+  const t=x=>(x||'').trim().replace(/[\t\n]/g,' ')||'——';
+  return [row('阶段',(s,i)=>nm(s,i)),row('用户行为',s=>t(s.do)),row('服务触点',s=>t(s.tp)),row('用户预期',s=>t(s.exp)),row('实际体验',s=>t(s.act)),row('情绪',s=>CMP[s.cmp].e),row('用户痛点',s=>s.cmp==='bad'?t(s.pain):'——'),row('机会点',(s,i)=>i===S.opp?t(S.oppText):'——')].join('\n');
+}
+$('#copyT').onclick=()=>copyText(tsv(),$('#copyT'),'复制成表格');
+$('#copyA').onclick=()=>{
+  const p=`我在做用户体验课的项目，下面是我写的一张用户旅程图（表格里“——”是我没写的格子）。\n场景：${S.scene.trim()||'（未写）'}\n目标：${S.goal.trim()||'（未写）'}\n\n${tsv()}\n\n请你：\n1. 帮我把“——”的格子按场景合理补全，补的内容在后面加（AI补）。\n2. 在情绪最低的阶段，再给我3个可以选的机会点（解决办法）。\n3. 整张表重新输出，格式不变。`;
+  copyText(p,$('#copyA'),'复制给AI补全');
+};
+load(withExtra('fan'));play();
+</script>

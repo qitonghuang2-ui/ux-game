@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>数一数：发一条动态</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: phone-first single column. Intro → mock phone with step counter → sort steps into 4 groups → tree. */
+:root{
+  --bg:#FFFAF0; --card:#FFFFFF; --line:#E3DCCB; --ink:#404040; --muted:#7F7F7F;
+  --teal:#165E5D; --teal2:#5F9387; --pale:#E7EFEC; --orange:#B4572B; --peach:#FBEBDD;
+  --red:#C8483B; --ok:#2E7D5B; --okbg:#E3F1E9; --phone:#F2F2F2; --phoneInk:#222;
+  --font:"Microsoft YaHei","PingFang SC","Noto Sans SC","Hiragino Sans GB",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --ok:#7FD1A8; --okbg:#27403A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B2422; --card:#24302D; --line:#3A4A46; --ink:#E8EEEC; --muted:#9DB0AA;
+  --teal:#8DD0C2; --teal2:#5F9387; --pale:#2C3F3B; --orange:#F0A57A; --peach:#3D2E26;
+  --red:#F08A7C; --ok:#7FD1A8; --okbg:#27403A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;line-height:1.6;
+  padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto}
+h1{font-size:clamp(24px,6.4vw,32px);margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 12px;font-size:15px}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.btn{font-size:17px;font-weight:700;padding:11px 22px;border-radius:14px;border:none;background:var(--orange);color:#fff}
+.btn.alt{background:var(--pale);color:var(--teal)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.steps{margin:10px 0 0;padding:10px 14px 10px 32px;background:var(--pale);border-radius:14px;font-size:15px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.count{font-weight:700;color:var(--teal);font-size:17px}
+.count b{font-size:28px;color:var(--orange);margin:0 2px}
+.task{background:var(--pale);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:15px}
+/* phone mock */
+.phone{width:min(100%,262px);aspect-ratio:9/19.5;margin:0 auto;border:7px solid #1c1c1e;border-radius:40px;box-shadow:0 0 0 2px #8e8e93;overflow:hidden;background:var(--phone);color:var(--phoneInk);display:flex;flex-direction:column;position:relative}
+.stat{background:#fff;display:flex;justify-content:space-between;align-items:center;padding:8px 20px 0;font-size:12px;font-weight:700;color:#222;height:32px;position:relative}
+.stat::after{content:"";position:absolute;left:50%;top:7px;width:64px;height:18px;margin-left:-32px;border-radius:10px;background:#111}
+.hm{background:#fff;height:18px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px}
+.hm::before{content:"";width:84px;height:4px;border-radius:2px;background:#222}
+.tabs+.hm,.sheet .hm{border-top:none}
+.bar{background:#fff;color:#222;padding:10px 14px;font-weight:700;text-align:center;border-bottom:1px solid #ddd;position:relative;font-size:15px}
+.bar .cam{position:absolute;right:10px;top:4px;font-size:22px;background:none;border:none;padding:2px 4px}
+.body{flex:1;overflow:auto;padding:0}
+.tabs{display:flex;background:#fff;border-top:1px solid #ddd}
+.tabs button{flex:1;border:none;background:none;padding:9px 0;font-size:13px;color:#555}
+.tabs button .i{display:block;font-size:20px}
+.li{display:flex;align-items:center;gap:10px;background:#fff;border:none;border-bottom:1px solid #eee;width:100%;text-align:left;padding:13px 14px;font-size:15px;color:#222}
+.li .i{font-size:20px}
+.li small{margin-left:auto;color:#999}
+.hint{animation:pulse 1.4s infinite;box-shadow:0 0 0 3px var(--orange) inset}
+@keyframes pulse{0%,100%{background-color:#fff}50%{background-color:#FBEBDD}}
+.ed{background:#fff;min-height:100%;padding:10px 12px;font-size:15px}
+.ed .txt{min-height:56px;border-bottom:1px solid #eee;margin-bottom:8px;color:#222;padding:4px 0}
+.ed .ph{color:#aaa}
+.imgs{display:flex;gap:6px;margin-bottom:8px}
+.img{width:64px;height:64px;border-radius:8px;background:linear-gradient(135deg,#9BD0C5,#F6C94C);display:flex;align-items:center;justify-content:center;font-size:26px}
+.ed .li{padding:11px 4px}
+.pub{background:#2E9E5B;color:#fff;border:none;border-radius:8px;padding:4px 12px;font-size:14px;position:absolute;right:10px;top:5px}
+.pub:disabled{background:#ccc}
+.pub.hint{animation:none;background:#2E9E5B;box-shadow:0 0 0 3px var(--orange)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ddd;box-shadow:0 -6px 20px rgba(0,0,0,.2)}
+.sheet button{display:block;width:100%;border:none;background:#fff;border-bottom:1px solid #eee;padding:13px;font-size:15px;color:#222}
+.done{padding:30px 18px;text-align:center;background:#fff;height:100%}
+.done .big{font-size:42px}
+/* sort */
+.sc{border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:10px}
+.sc .nm{font-weight:700;font-size:18px;color:var(--teal);margin-bottom:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 6px;font-size:15px;font-weight:700}
+.opt.wrong{background:var(--peach);border-color:var(--red);color:var(--red)}
+.opt.right{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.fb{margin-top:10px;border-radius:12px;padding:8px 12px;font-size:15px;min-height:2.4em}
+.fb.ok{background:var(--okbg);color:var(--ok);font-weight:700}
+.fb.no{background:var(--peach);color:var(--red);font-weight:700}
+.tbox{margin-top:8px;border:1.5px solid var(--line);border-radius:14px;padding:10px 6px;background:var(--card)}
+.tr{margin-top:10px;padding-left:6px}
+.root{display:inline-block;background:var(--teal);color:#fff;font-weight:700;border-radius:12px;padding:6px 16px}
+.br{position:relative;margin-left:18px;padding:10px 0 2px 22px;border-left:3px solid var(--teal2)}
+.br::before{content:"";position:absolute;left:0;top:26px;width:18px;border-top:3px solid var(--teal2)}
+.gn{display:inline-block;background:var(--teal2);color:#fff;font-weight:700;border-radius:10px;padding:3px 12px;font-size:15px}
+.lv{margin:6px 0 4px 14px;padding-left:14px;border-left:2px solid var(--line)}
+.lf{position:relative;background:var(--pale);border-radius:10px;padding:5px 10px;margin:6px 0;font-size:15px}
+.lf::before{content:"";position:absolute;left:-14px;top:50%;width:12px;border-top:2px solid var(--line)}
+.lf i{font-style:normal;display:inline-block;min-width:1.6em;height:1.6em;line-height:1.6em;text-align:center;border-radius:50%;background:var(--orange);color:#fff;font-size:12px;font-weight:700;margin-right:8px}
+.lf.none{background:none;border:1.5px dashed var(--line);color:var(--muted)}
+.g{border-radius:12px;background:var(--pale);padding:8px 12px;margin-bottom:8px}
+.g b{color:var(--teal);display:block}
+.g span{font-size:15px}
+.plan{border:1.5px dashed var(--orange);background:var(--peach);border-radius:12px;padding:8px 12px;margin-top:8px;font-size:15px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>数一数：发一条动态</h1>
+  <p class="sub">在下面的示意手机上，真的发一条动态。页面会帮你数一数：你点了几步。</p>
+  <section class="panel" id="app"></section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const GROUPS=['打开朋友圈','选内容','设置谁能看','发表'];
+let st;
+function init(){st={scr:'intro',log:[],txt:false,imgs:0,loc:false,vis:'公开',sheet:false,fb:'',idx:0}}
+function add(label,g){st.log.push({label,g,done:false})}
+function head(){return `<div class="top"><span class="count">已点 <b>${st.log.length}</b> 步</span><button class="btn alt" id="rs" style="font-size:14px;padding:6px 14px">重新来</button></div>`}
+const STAT='<div class="stat"><span>9:41</span><span>5G ▮▮▮</span></div>';
+function phone(inner,title,extra,foot){
+  return `<div class="phone">${STAT}<div class="bar">${title}${extra||''}</div><div class="body">${inner}</div>${foot||''}<div class="hm"></div></div>`;
+}
+function render(){
+  const a=$('#app');let h='';
+  if(st.scr==='intro'){
+    h=`<p style="margin:0 0 6px"><b>你要做的事：</b>在示意手机里，发一条带文字和图片的动态。</p>
+    <ol class="steps"><li>跟着橙色闪烁的地方点，想怎么发都行，不用问别人。</li><li>发完，页面告诉你一共点了几步。</li><li>再把这些步骤，归到几个“小任务”里，就得到一棵任务树。</li></ol>
+    <p class="sub" style="margin-top:10px">这只是一个示意界面，和你手机里的真实界面不完全一样。不用交，不用说出来。</p>
+    <div class="row"><button class="btn" id="go">开始发</button></div>`;
+  }else if(st.scr==='home'){
+    h=head()+`<div class="task">任务：发一条动态。先找到“发现”。</div>`+phone(`<div style="padding:70px 20px;text-align:center;color:#888">（聊天列表）</div>`,'消息','',`<div class="tabs"><button>聊天</button><button>通讯录</button><button class="hint" data-a="disc"><span class="i">🧭</span>发现</button><button>我</button></div>`);
+  }else if(st.scr==='disc'){
+    h=head()+`<div class="task">找到“朋友圈”。</div>`+phone(`<button class="li hint" data-a="feed"><span class="i">🌅</span>朋友圈<small>›</small></button><button class="li" disabled><span class="i">🎬</span>视频<small>›</small></button><button class="li" disabled><span class="i">🔍</span>搜一搜<small>›</small></button>`,'发现');
+  }else if(st.scr==='feed'){
+    h=head()+`<div class="task">点右上角的相机，开始发。</div>`+phone(`<div style="padding:40px 20px;text-align:center;color:#888">（朋友们的动态）</div>`,'朋友圈','<button class="cam hint" data-a="edit" aria-label="发一条">📷</button>');
+  }else if(st.scr==='edit'){
+    const can=st.txt||st.imgs>0;
+    const ed=`<div class="ed"><div class="txt ${st.txt?'':'ph'}">${st.txt?'今天的云真好看':'这一刻的想法…'}</div>
+      <div class="imgs">${'<div class="img">🖼️</div>'.repeat(st.imgs)}</div>
+      <button class="li ${st.txt?'':'hint'}" data-a="txt"><span class="i">✏️</span>写文字<small>${st.txt?'已写':'›'}</small></button>
+      <button class="li" data-a="img"><span class="i">🖼️</span>选图片或拍照<small>${st.imgs?st.imgs+' 张':'›'}</small></button>
+      <button class="li" data-a="loc"><span class="i">📍</span>所在位置（可以不加）<small>${st.loc?'已加':'›'}</small></button>
+      <button class="li" data-a="vis"><span class="i">👥</span>谁可以看<small>${st.vis} ›</small></button></div>`;
+    const sheet=st.sheet?`<div class="sheet"><button data-a="v1">公开</button><button data-a="v2">私密（仅自己）</button></div>`:'';
+    h=head()+`<div class="task">写点什么、选图片，想设置就设置，然后点右上角“发表”。</div><div class="phone">${STAT}<div class="bar">发一条<button class="pub ${can?'hint':''}" ${can?'':'disabled'} data-a="pub">发表</button></div><div class="body">${ed}</div>${sheet}<div class="hm"></div></div>`;
+  }else if(st.scr==='sort'){
+    const cur=st.log.find(l=>!l.done);
+    h=`<div class="task"><b>你一共点了 ${st.log.length} 步。</b>现在把每一步，归到它所在的“小任务”里。</div>`;
+    if(cur){
+      st.idx=st.log.indexOf(cur);
+      h+=`<div class="sc"><div class="nm">第${st.idx+1}步：${cur.label}</div><div class="grid">${GROUPS.map((g,i)=>`<button class="opt" data-g="${i}">${g}</button>`).join('')}</div></div><div class="fb ${st.fbc||''}" role="status" aria-live="polite">${st.fb||'这一步属于哪个小任务？'}</div>`;
+    }
+  }
+  if(st.scr==='tree'){
+    const by=GROUPS.map((g,gi)=>({g,s:st.log.map((l,k)=>({l,k})).filter(o=>o.l.g===gi)}));
+    h=`<div style="text-align:center"><div style="font-size:34px;line-height:1">🌲</div><div class="count">你的任务树，一共 <b>${st.log.length}</b> 步</div></div>
+    <div class="tbox">${treeSvg(by)}</div>
+        <div class="plan"><b>操作计划（先后顺序）：</b><br>${st.log.map(l=>l.label).join(' → ')}</div>
+    <div class="plan"><b>想一想（不用说出来）：</b>如果图片选错了，你会怎么办？这就是任务树旁边的“如果……就……”。你的步数，和旁边同学一样吗？不一样，是因为有些步骤可选。</div>
+    <div class="row"><button class="btn" id="again">再发一条，换个发法</button></div>
+    <p class="sub" style="margin-top:10px">下一页是参考的任务树，对一对：你的树，和它差在哪。</p>`;
+  }
+  a.innerHTML=h;
+  const g=(id,f)=>{const e=$(id);if(e)e.onclick=f};
+  g('#go',()=>{st.scr='home';render()});
+  g('#rs',()=>{init();st.scr='home';render()});
+  g('#again',()=>{init();st.scr='home';render()});
+  a.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a));
+  a.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>sortPick(b));
+}
+function treeSvg(by){
+  const RH=38,W=340,gx=76,gw=96,lx=196;
+  let rows=0;const pos=by.map(o=>{const n=Math.max(1,o.s.length);const y0=rows*RH;rows+=n;return {y0,n}});
+  const H=rows*RH+8,cy=H/2;let g='';
+  const curve=(x1,y1,x2,y2)=>{const m=(x1+x2)/2;return `<path d="M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}" fill="none" stroke="var(--teal2)" stroke-width="2.5"/>`};
+  by.forEach((o,gi)=>{
+    const p=pos[gi],gy=p.y0+p.n*RH/2+4;
+    g+=curve(58,cy,gx,gy);
+    o.s.forEach((x,k)=>{const ly=p.y0+k*RH+RH/2+4;g+=curve(gx+gw,gy,lx,ly)});
+    if(!o.s.length)g+=curve(gx+gw,gy,lx,gy);
+  });
+  g+=`<rect x="0" y="${cy-26}" width="58" height="52" rx="12" fill="var(--teal)"/><text x="29" y="${cy-3}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">发一条</text><text x="29" y="${cy+15}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">动态</text>`;
+  by.forEach((o,gi)=>{
+    const p=pos[gi],gy=p.y0+p.n*RH/2+4;
+    g+=`<rect x="${gx}" y="${gy-15}" width="${gw}" height="30" rx="10" fill="var(--teal2)"/><text x="${gx+gw/2}" y="${gy+5}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">${o.g}</text>`;
+    if(!o.s.length)g+=`<rect x="${lx}" y="${gy-15}" width="${W-lx}" height="30" rx="8" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="5 4"/><text x="${lx+8}" y="${gy+5}" fill="var(--muted)" font-size="13">没点，可以不做</text>`;
+    o.s.forEach((x,k)=>{const ly=p.y0+k*RH+RH/2+4;
+      g+=`<rect x="${lx}" y="${ly-15}" width="${W-lx}" height="30" rx="8" fill="var(--pale)"/><circle cx="${lx+15}" cy="${ly}" r="10" fill="var(--orange)"/><text x="${lx+15}" y="${ly+4.5}" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">${x.k+1}</text><text x="${lx+32}" y="${ly+5}" fill="var(--ink)" font-size="14">${x.l.label}</text>`});
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="你的任务树" style="width:100%;height:auto;display:block">${g}</svg>`;
+}
+function act(x){
+  if(x==='disc'){add('点“发现”',0);st.scr='disc'}
+  else if(x==='feed'){add('点“朋友圈”',0);st.scr='feed'}
+  else if(x==='edit'){add('点右上角相机',0);st.scr='edit'}
+  else if(x==='txt'){if(!st.txt){add('写文字',1);st.txt=true}}
+  else if(x==='img'){if(st.imgs<3){add('选一张图片',1);st.imgs++}}
+  else if(x==='loc'){if(!st.loc){add('加位置',1);st.loc=true}}
+  else if(x==='vis'){st.sheet=true;add('点“谁可以看”',2)}
+  else if(x==='v1'||x==='v2'){st.vis=x==='v1'?'公开':'私密';add('选“'+st.vis+'”',2);st.sheet=false}
+  else if(x==='pub'){add('点右上角“发表”',3);st.scr='sort';st.fb='';st.fbc=''}
+  render();
+}
+function sortPick(b){
+  const cur=st.log[st.idx],i=+b.dataset.g;
+  if(i===cur.g){cur.done=true;st.fb='对！';st.fbc='ok';if(!st.log.find(l=>!l.done)){st.scr='tree'}render()}
+  else{b.classList.add('wrong');b.disabled=true;st.fb='再想想：这一步，是在“打开”、“选内容”、“设置谁能看”，还是“发表”？';st.fbc='no';const f=$('#app .fb');f.className='fb no';f.textContent=st.fb}
+}
+init();render();
+</script>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>讲课故事地图</title>
+<style>
+/* Layout: one winding road across a campus scene; a student character walks station to station; a card under the road holds the teaching notes for the current stop. */
+:root{
+  --bg:#FFF9EE; --card:#FFFFFF; --line:#E6DCC6; --ink:#3F3B35; --muted:#7C766B;
+  --teal:#1F7A74; --teal-soft:#DCEEEA; --orange:#D9692B; --orange-soft:#FBE5D6;
+  --sky:#DDEFEF; --hill1:#BFDDD2; --hill2:#A5CDBF; --road:#D8CBB0; --tree:#5E9B87;
+  --font:"Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B2321; --card:#243230; --line:#37504B; --ink:#EAE6DC; --muted:#A7B3AE;
+  --teal:#5CC2B8; --teal-soft:#2A4A47; --orange:#F0935A; --orange-soft:#4A3426;
+  --sky:#27413E; --hill1:#2F514A; --hill2:#3A6158; --road:#55645F; --tree:#7BB7A4; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B2321; --card:#243230; --line:#37504B; --ink:#EAE6DC; --muted:#A7B3AE;
+  --teal:#5CC2B8; --teal-soft:#2A4A47; --orange:#F0935A; --orange-soft:#4A3426;
+  --sky:#27413E; --hill1:#2F514A; --hill2:#3A6158; --road:#55645F; --tree:#7BB7A4; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:15px;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:26px;color:var(--teal);text-wrap:balance}
+.sub{margin:2px 0 0;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{font:inherit;font-weight:700;border:2px solid var(--teal);background:transparent;color:var(--teal);border-radius:999px;padding:7px 18px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--teal);color:#fff}
+.tab:focus-visible,.btn:focus-visible,.row:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.stage{background:var(--sky);border-radius:20px;overflow:hidden;border:1px solid var(--line);position:relative}
+.stage svg{display:block;width:100%;height:auto}
+.lbl{font-size:21px;fill:var(--ink);text-anchor:middle;font-weight:700}
+.lbl.dim{fill:var(--muted);font-weight:400}
+.node{cursor:pointer}
+.node circle.base{fill:var(--card);stroke:var(--teal);stroke-width:4}
+.node.done circle.base{fill:var(--teal)}
+.node.done text.num{fill:#fff}
+.node.cur circle.base{fill:var(--orange);stroke:var(--orange)}
+.node.cur text.num{fill:#fff}
+.node text.num{font-size:24px;font-weight:700;fill:var(--teal);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.ring{fill:none;stroke:var(--orange);stroke-width:3;opacity:.0}
+.node.cur .ring{opacity:.7;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{0%{r:30;opacity:.8}100%{r:52;opacity:0}}
+.hero{transform-box:fill-box}
+.bob{animation:bob .5s ease-in-out infinite alternate}
+.still .bob{animation:none}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+.bubble{margin:0 14px 14px;background:var(--card);border:2px solid var(--orange);border-radius:16px;padding:10px 14px;font-size:15px;line-height:1.6;box-shadow:0 2px 0 var(--orange);min-height:3.4em}
+.bubble b{color:var(--orange)}
+.ctrl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:10px 18px;cursor:pointer;background:var(--teal);color:#fff}
+.btn.alt{background:var(--card);color:var(--teal);border:2px solid var(--teal)}
+.btn.play[aria-pressed="true"]{background:var(--orange)}
+.prog{flex:1;min-width:140px;height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--orange);transition:width .5s}
+.meta{color:var(--muted);font-size:13px;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.card h2{margin:0;font-size:22px;color:var(--teal);text-wrap:balance}
+.tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{background:var(--teal-soft);color:var(--teal);border-radius:999px;padding:2px 12px;font-size:13px;font-weight:700}
+.tag.o{background:var(--orange-soft);color:var(--orange)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.col{background:var(--bg);border-radius:14px;padding:12px 14px;min-width:0}
+.col h3{margin:0 0 6px;font-size:13px;letter-spacing:.08em;color:var(--orange)}
+.col ul{margin:0;padding-left:18px}
+.col li{margin:2px 0}
+.col p{margin:0}
+.over{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:8px 8px}
+.row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:12px;cursor:pointer}
+.row:hover{background:var(--teal-soft)}
+.row[aria-current="true"]{background:var(--orange-soft)}
+.row .n{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;font-weight:700;display:grid;place-items:center;font-size:13px}
+.row[aria-current="true"] .n{background:var(--orange)}
+.row .t{min-width:0}
+.row .t small{display:block;color:var(--muted)}
+.row .m{color:var(--muted);font-size:13px;white-space:nowrap}
+.foot{color:var(--muted);font-size:13px}
+@media (max-width:620px){.lbl{display:none}.bubble{font-size:14px}h1{font-size:22px}}
+@media (prefers-reduced-motion:reduce){.bob,.node.cur .ring{animation:none}}
+</style></head><body>
+
+<div class="wrap">
+  <div>
+    <h1>讲课故事地图</h1>
+    <p class="sub">一个角色，一条路，一站一站走完一节课。跟着故事走一遍，流程就记住了。</p>
+  </div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="stage still" id="stage">
+    <svg id="svg" viewBox="0 0 1000 300" role="img" aria-label="校园小路，学生沿着小路一站一站走"></svg>
+    <div class="bubble" id="bubble"></div>
+  </div>
+  <div class="ctrl">
+    <button class="btn alt" id="prev" type="button">上一站</button>
+    <button class="btn" id="next" type="button">下一站</button>
+    <button class="btn alt play" id="play" type="button" aria-pressed="false">自动讲故事</button>
+    <div class="prog" aria-hidden="true"><i id="pbar"></i></div>
+    <span class="meta" id="pmeta"></span>
+  </div>
+  <div class="card" id="card"></div>
+  <div class="over" id="over" aria-label="全程总览"></div>
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const BOOKS={
+ch5:{tab:'第五章　任务分析 + 旅程图',hero:'小林',title:'小林取快递：从拆任务到旅程图',
+ foot:'时间来自课件备注。必讲部分合计 85 分钟，带上全部可选页（第 11、19、20、31 页）约 94 分钟。',
+ st:[
+ {t:'出发：你是怎么来上课的？',pg:'第3–7页',m:12,
+  story:'小林早上起床，赶去上课。路上做了十几件事，他自己一件都没留意。',
+  say:['先给一分钟：学生在手机备忘录里写下起床到坐进教室的每一步，只给自己看。','什么是任务，做成一件事一般有四个部分。','回到开场，对照自己写的“来上课”。'],
+  doing:'写“来上课”的每一步，不用说，不用交。',next:'做一件事其实有很多小步。下一站：怎么把大任务拆开。'},
+ {t:'拆开：取快递太大了',pg:'第8–11页',m:9,opt:'第11页外卖树可选，加3分钟',
+  story:'快递站在校外，小林发现“取快递”是个大任务。他拿出一张纸，开始把它拆成一小块一小块。',
+  say:['层次任务分析：把大任务拆成小任务，画成任务树。','拆任务的五个步骤。','操作计划：先后顺序，以及“如果……就……”。','时间够再拆一棵：点一份外卖（可选）。'],
+  doing:'看，不用答。',next:'树会画了，来一次真的：发一条朋友圈到底几步。'},
+ {t:'数一数：发一条朋友圈',pg:'第12–13页',m:7,
+  story:'小林掏出手机，要发一条朋友圈。这次他数着点：一下，两下，三下……',
+  say:['学生用“1-数一数发朋友圈.html”，在示意手机里发一条，页面帮他们数步数、归成任务树。','翻到第13页，对参考树：打开朋友圈、选内容、设置谁能看、发表。'],
+  doing:'点一遍，归一归，对一对。不用交，不用说。',next:'步骤数清了。可有的步骤特别容易出错，下一站看设计怎么帮忙。'},
+ {t:'路标：让任务更好做',pg:'第14–15页',m:7,
+  story:'路口有四块路标。小林发现，有的路标让他少走弯路，有的让他走错也能回头。',
+  say:['四条原则：简化任务结构、利用限制因素、考虑易出错性、标准化，每条配一个手机里的例子。','第15页自己选：这个设计用了哪条原则？'],
+  doing:'自己选，不点名。',next:'上半节学的是“拆”，说完中场小结，下半节开始学“感受”。'},
+ {t:'半山腰：中场小结',pg:'第16页',m:1,
+  story:'小林坐下喘口气。上半程他学会了拆，接下来要学的是，路上心情怎么起起落落。',
+  say:['一分钟小结：上半节学了拆，下半节学感受。'],
+  doing:'听。',next:'感受这条线，有个名字：用户旅程图。'},
+ {t:'驿站：用户旅程图',pg:'第17–20页',m:5,opt:'第19、20页可选，各加2分钟',
+  story:'小林走到快递驿站，墙上贴着一张图：他每一步做了什么，心情怎么变，一条曲线画得清清楚楚。',
+  say:['什么是用户旅程图。','校园例子：去校外快递站取快递，看情绪曲线。','完整表和“好在哪、难在哪”可选。'],
+  doing:'看，不用答。',next:'图长什么样看到了，下一站教你自己搭，一共八步。'},
+ {t:'八步：搭一张旅程图',pg:'第21–26页',m:14,
+  story:'小林拿出笔，决定自己画一张。先摆出“他做了什么”，再找出“哪里不好”，一共八步。',
+  say:['第1到4步：先把他做了什么摆出来。','第5到8步：再找出哪里不好。','企业里用的旅程图模板，也是这个结构。','示例：饭搭子。','最容易错的两处。'],
+  doing:'看和记，不用答。',next:'规则讲完了。先玩一个小游戏，练练判断情绪。'},
+ {t:'过山车：情绪侦探',pg:'第27页',m:8,
+  story:'路尽头是一座情绪过山车。每个案件里，有人一路上上下下，小林要找出他最难受的那一站。',
+  say:['“2-情绪过山车侦探.html”：3个小案件，判情绪、找最低点、选改法。','你也可以在自己电脑上投屏，带全班看着判，不点名。'],
+  doing:'判好、一般、差，找最低点。选错不扣分。',next:'侦探练完。现在轮到你自己：今天要做出一页“我的旅程图”。'},
+ {t:'终点前：做出“我的旅程图”',pg:'第28–31、33页',m:20,
+  story:'小林回到自己的场景，开始画自己的旅程图：画曲线，让AI补空格，再存下来。',
+  say:['第28页讲清楚要做出什么、有5条标准。','第29页 画：“3-画情绪曲线.html”，写场景、分几段、选好/差不多/差。','第30页 补：复制给AI补全，挑一个解决办法。','第33页 存：保存成图片，放进项目档案。','打不开的用《第五章备用互动单》。'],
+  doing:'这是今天要交的东西：我的旅程图，存进项目档案。',next:'图存好了。最后回头看一遍今天走过的路。'},
+ {t:'到站：回顾',pg:'第32页',m:2,
+  story:'小林回头看，从一个场景出发，拆成任务树，再画成旅程图。第六章，他要从图里最低的那一段开始做原型。',
+  say:['第五章回顾：从场景一步步走到原型。','预告：第六章做原型，从你图里最低的一段开始改。'],
+  doing:'记住：旅程图只写主要路线，机会点落在情绪最低的地方。',next:'下课。'}
+ ]},
+ch4:{tab:'第四章　场景分析',hero:'小李',title:'小李的校园：把场景讲成故事',
+ foot:'课件备注里第四章没有写分钟数，所以这里只显示顺序，没有时间。',
+ st:[
+ {t:'出发：从人物走到场景',pg:'第3–5页',
+  story:'小李想给食堂做一个排队App。上一章他画好了人物，这一章他要回答：这个人，到底在什么情况下遇到麻烦？',
+  say:['从第三章到第四章：人物之后是场景。','场景速查：场景是什么、由什么构成。','第5页小测：这条场景描述缺了什么？'],
+  doing:'小测，不点名。',next:'知道场景由什么构成，下一站学怎么写它。'},
+ {t:'写场景：长版和短版',pg:'第6–8页',
+  story:'小李先写了一整天：早上、中午、晚上。同学说太长。他又改成一句话。两种写法，各有各的用处。',
+  say:['长版描述：两种写法。','长版：一天的示例。','短版：一句话场景。'],
+  doing:'看，不用答。',next:'场景写出来了，但还没接到方案。下一站：场景怎么接到方案。'},
+ {t:'接方案：PSPS',pg:'第9–11页',
+  story:'小李发现，只写场景不够，得接上“所以我们做什么”。他找到一个四步的模板，照着填。',
+  say:['PSPS：场景接到方案。','示例：一个校园场景。','模板：照着填就能用。'],
+  doing:'看模板，不用答。',next:'写在纸上终究是想象。下一站：到真实场景里去看。'},
+ {t:'实地看：情境访查',pg:'第12页',
+  story:'小李走进食堂，站在队伍旁边，看真实的人怎么排队、怎么抱怨。纸上想不到的细节，全在这里。',
+  say:['情境访查速查：到真实场景里去看。'],
+  doing:'听。',next:'看到了，还要把需求说清楚。下一站：用户故事。'},
+ {t:'一句话：用户故事',pg:'第13页',
+  story:'小李把看到的写成一句话：谁，想要什么，为了什么。简单，同事一看就懂。',
+  say:['用户故事：一句话说清需求。'],
+  doing:'听。',next:'一句话够用，但想说服别人，还得会讲故事。下一站：SCQA。'},
+ {t:'开场白：SCQA',pg:'第14–16页',
+  story:'小李要去说服食堂老板。他学会了一个开场：先说背景，再说冲突，抛出问题，最后给答案。',
+  say:['SCQA模型：把问题讲成故事。','案例：新品发布会怎么开场。','案例：招聘文案。'],
+  doing:'看案例，不用答。',next:'SCQA讲别人的事。要讲自己做过的事，用STAR。'},
+ {t:'讲自己：STAR',pg:'第17–20页',
+  story:'老板问小李：你凭什么做这个？小李讲了自己做过的一件事：情境、任务、行动、结果。',
+  say:['STAR模型：讲清自己做过的事。','第18页：用户故事、STAR、SCQA，三件套放在一起。','第19页课堂练习：用STAR梳理自己的一段经历（这一页内容不动）。','第20页：提示词4，让AI检查你的STAR。'],
+  doing:'自己梳理一段经历，可以让AI检查。',next:'三种讲法都练过了。回顾一下，再回到作业。'},
+ {t:'回头看：本章回顾',pg:'第21页',
+  story:'小李回头看自己走过的路：人物、场景、故事，一步一步，做出来的。',
+  say:['第四章回顾：从人物到故事，一步步做。'],
+  doing:'听。',next:'回顾完了，回到作业：写出你画像人物的场景。'},
+ {t:'回到作业：画像人物的一天',pg:'第22–25页',
+  story:'轮到学生自己。小李把画像人物放进“一天”里：几点，在哪，在做什么，心情怎样，需求在哪一刻冒出来。',
+  say:['第22页：写三个场景，选一个写成四句话的小故事（按SCQA）。','第23页：“场景互动_学生版.html”，先看示例，再拼自己的一天，复制成文字。','第24–25页：用一条提示词，让AI写出画像人物的一天。','打不开用《第四章备用互动单》第1页。'],
+  doing:'拼自己的一天，补进人物画像。',next:'一天写好了。最后玩一个：抽盲盒，看看会碰上什么。'},
+ {t:'抽盲盒：场景盲盒',pg:'第26–30页',
+  story:'小李最后抽了三张牌：下午3点，图书馆，校园网特别卡。他想，换成画像人物，会怎么办？',
+  say:['第26页：三张牌，时间牌、地点牌、小意外牌。','第27页：在互动页里抽，可以锁定一项再抽。','第28页：看一个例子。','第29页：让AI把盲盒写成小故事（想玩再玩）。','第30页：留下一个最好的就行。','打不开用《第四章备用互动单》第2页：用学号抽牌。'],
+  doing:'抽2到3次，心里想想，不用说、不用交。',next:'下课。'}
+ ]}
+};
+const $=s=>document.querySelector(s), NS='http://www.w3.org/2000/svg';
+const svg=$('#svg'),bubble=$('#bubble'),card=$('#card'),over=$('#over');
+let key='ch5',cur=0,timer=null,anim=null,pathEl,visEl,heroEl,lens=[],pts=[],total=0;
+const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+function catmull(P){let d=`M${P[0][0]},${P[0][1]}`;for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2,k=.22;d+=` C${p1[0]+(p2[0]-p0[0])*k},${p1[1]+(p2[1]-p0[1])*k} ${p2[0]-(p3[0]-p1[0])*k},${p2[1]-(p3[1]-p1[1])*k} ${p2[0]},${p2[1]}`}return d}
+function scene(){
+  svg.innerHTML='';
+  const b=BOOKS[key],n=b.st.length;
+  el('circle',{cx:500,cy:44,r:26,fill:'#F6C36B',opacity:.9});
+  el('path',{d:'M0,250 C150,190 260,230 400,205 C560,175 700,235 1000,190 L1000,330 L0,330Z',fill:'var(--hill1)'});
+  el('path',{d:'M0,290 C200,250 380,285 560,262 C760,238 880,282 1000,262 L1000,330 L0,330Z',fill:'var(--hill2)'});
+  [[90,262],[330,276],[610,270],[820,282],[960,262]].forEach(([x,y])=>{el('rect',{x:x-3,y:y-6,width:6,height:16,fill:'var(--road)'});el('path',{d:`M${x-16},${y-4} L${x},${y-34} L${x+16},${y-4}Z`,fill:'var(--tree)'})});
+  pts=[];for(let i=0;i<n;i++){const x=70+i*(860/(n-1)),y=(i%2?112:176);pts.push([x,y])}
+  const d=catmull(pts);
+  pathEl=el('path',{d,fill:'none',stroke:'var(--road)','stroke-width':16,'stroke-linecap':'round'});
+  el('path',{d,fill:'none',stroke:'var(--card)','stroke-width':2,'stroke-dasharray':'2 14','stroke-linecap':'round',opacity:.8});
+  total=pathEl.getTotalLength();
+  lens=pts.map((_,i)=>{if(i===0)return 0;const t=document.createElementNS(NS,'path');t.setAttribute('d',catmull(pts.slice(0,i+1)));svg.appendChild(t);const L=t.getTotalLength();svg.removeChild(t);return L});
+  visEl=el('path',{d,fill:'none',stroke:'var(--orange)','stroke-width':8,'stroke-linecap':'round','stroke-dasharray':`${total}`,'stroke-dashoffset':total});
+  b.st.forEach((s,i)=>{
+    const g=el('g',{class:'node',tabindex:0,role:'button','aria-label':`第${i+1}站 ${s.t}`});
+    el('circle',{class:'ring',cx:pts[i][0],cy:pts[i][1],r:30},g);
+    el('circle',{class:'base',cx:pts[i][0],cy:pts[i][1],r:27},g);
+    const t=el('text',{class:'num',x:pts[i][0],y:pts[i][1]},g);t.textContent=i+1;
+    const lb=el('text',{class:'lbl',x:pts[i][0],y:pts[i][1]+60},g);
+    const short=s.t.split('：')[0];lb.textContent=short;
+    g.addEventListener('click',()=>go(i));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(i)}});
+  });
+  heroEl=el('g',{});
+  const h=el('g',{class:'bob'},heroEl);
+  el('rect',{x:-13,y:-12,width:26,height:30,rx:9,fill:'var(--teal)'},h);
+  el('rect',{x:-19,y:-8,width:9,height:20,rx:4,fill:'var(--orange)'},h);
+  el('circle',{cx:0,cy:-26,r:15,fill:'#F2C9A5'},h);
+  el('path',{d:'M-15,-28 Q-12,-46 3,-42 Q16,-40 15,-26 Q8,-34 -4,-33 Q-10,-32 -15,-28Z',fill:'#3A2E28'},h);
+  el('circle',{cx:-5,cy:-25,r:2,fill:'#3A2E28'},h);el('circle',{cx:6,cy:-25,r:2,fill:'#3A2E28'},h);
+  el('path',{d:'M-4,-18 Q0,-14 5,-18',stroke:'#3A2E28','stroke-width':2,fill:'none','stroke-linecap':'round'},h);
+  el('rect',{x:-9,y:18,width:7,height:10,rx:3,fill:'#3A2E28'},h);el('rect',{x:2,y:18,width:7,height:10,rx:3,fill:'#3A2E28'},h);
+  place(lens[cur]);
+}
+function place(L){const p=pathEl.getPointAtLength(L);heroEl.setAttribute('transform',`translate(${p.x},${p.y-62})`);visEl.setAttribute('stroke-dashoffset',total-L)}
+function marks(){svg.querySelectorAll('.node').forEach((g,i)=>{g.classList.toggle('done',i<cur);g.classList.toggle('cur',i===cur)})}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function typeIn(text){
+  bubble.innerHTML=`<b>${esc(BOOKS[key].hero)}：</b><span id="bt"></span>`;const bt=$('#bt');
+  if(REDUCE){bt.textContent=text;return}
+  let i=0;clearInterval(typeIn.t);typeIn.t=setInterval(()=>{bt.textContent=text.slice(0,++i);if(i>=text.length)clearInterval(typeIn.t)},32)}
+function render(){
+  const b=BOOKS[key],s=b.st[cur],n=b.st.length;
+  marks();typeIn(s.story);
+  const hasM=b.st.some(x=>x.m);
+  card.innerHTML=`<div class="tags"><span class="tag">第 ${cur+1} 站 / ${n}</span><span class="tag">${esc(s.pg)}</span>${s.m?`<span class="tag o">${s.m} 分钟</span>`:''}${s.opt?`<span class="tag o">${esc(s.opt)}</span>`:''}</div>
+  <h2>${esc(s.t)}</h2>
+  <div class="cols"><div class="col"><h3>这一站怎么讲</h3><ul>${s.say.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+  <div class="col"><h3>学生做什么</h3><p>${esc(s.doing)}</p></div>
+  <div class="col"><h3>走向下一站</h3><p>${esc(s.next)}</p></div></div>`;
+  $('#prev').disabled=cur===0;$('#next').textContent=cur===n-1?'重新走一遍':'下一站';
+  $('#pbar').style.width=((cur+1)/n*100)+'%';
+  let acc=0;if(hasM)b.st.slice(0,cur+1).forEach(x=>acc+=x.m||0);
+  $('#pmeta').textContent=hasM?`讲到这里约 ${acc} 分钟`:`第 ${cur+1} 站`;
+  over.innerHTML=b.st.map((x,i)=>`<div class="row" role="button" tabindex="0" data-i="${i}" ${i===cur?'aria-current="true"':''}><span class="n">${i+1}</span><span class="t">${esc(x.t)}<small>${esc(x.pg)}</small></span><span class="m">${x.m?x.m+' 分钟':''}</span></div>`).join('');
+  over.querySelectorAll('.row').forEach(r=>{r.onclick=()=>go(+r.dataset.i);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(+r.dataset.i)}}});
+  $('#foot').textContent=b.foot;
+}
+function go(i){
+  const n=BOOKS[key].st.length;i=Math.max(0,Math.min(n-1,i));
+  const from=cur===i&&anim?null:lens[cur];cur=i;marks();render();
+  const to=lens[i];cancelAnimationFrame(anim);
+  const st=$('#stage');
+  if(REDUCE||from==null||from===to){place(to);return}
+  st.classList.remove('still');const t0=performance.now(),D=Math.min(1600,500+Math.abs(to-from)*1.6);
+  const step=t=>{const k=Math.min(1,(t-t0)/D),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;place(from+(to-from)*e);
+    if(k<1)anim=requestAnimationFrame(step);else{anim=null;st.classList.add('still')}};
+  anim=requestAnimationFrame(step);
+}
+function stopPlay(){clearInterval(timer);timer=null;const p=$('#play');p.setAttribute('aria-pressed','false');p.textContent='自动讲故事'}
+function startPlay(){const p=$('#play');p.setAttribute('aria-pressed','true');p.textContent='暂停';
+  timer=setInterval(()=>{if(cur>=BOOKS[key].st.length-1){stopPlay();return}go(cur+1)},9000)}
+$('#next').onclick=()=>{stopPlay();go(cur===BOOKS[key].st.length-1?0:cur+1)};
+$('#prev').onclick=()=>{stopPlay();go(cur-1)};
+$('#play').onclick=()=>timer?stopPlay():startPlay();
+document.addEventListener('keydown',e=>{if(e.target.closest('.node,.row,button'))return;if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1)});
+function setBook(k){stopPlay();key=k;cur=0;document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===k));
+  scene();render()}
+$('#tabs').innerHTML=Object.keys(BOOKS).sort().map(k=>`<button class="tab" role="tab" data-k="${k}" type="button">${BOOKS[k].tab}</button>`).join('');
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setBook(t.dataset.k));
+setBook('ch5');
+</script>
+</body></html>
